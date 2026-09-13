@@ -1,0 +1,25 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f2f2f2;
+    margin: 40px;
+}
+h1 {
+    text-align: center;
+}
+
+.member {
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin: 15px auto;
+    max-width: 500px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+    .member img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
