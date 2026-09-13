@@ -7,7 +7,7 @@ import (
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/static/about.html", http.StatusSeeOther)
+		http.Redirect(w, r, "/static/aboutPage.html", http.StatusSeeOther)
 	})
 
 	fs := http.FileServer(http.Dir("static/"))
