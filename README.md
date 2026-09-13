@@ -10,4 +10,8 @@ for debian based distros just hit this and ur good!
 ``sudo apt install sqlite3 golang``
 
 ## running the project
-run ``go run main.go`` and follow the instructions in your terminal!
+in your terminal, ``cd`` to ``app/`` and run ``go run main.go``
+
+The program should now be running! Follow the rest of the instructions in the 
+terminal
+
