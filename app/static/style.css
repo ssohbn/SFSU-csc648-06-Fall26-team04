@@ -14,9 +14,15 @@ h1 {
     margin: 15px auto;
     max-width: 500px;
     display: flex;
-    justify-content: space-between;
+    gap: 50px;
     align-items: center;
 }
+
+    .member p {
+        font-size: 13px;
+        color: #777;
+    }
+
     .member img {
         width: 100px;
         height: 100px;
