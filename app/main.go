@@ -1,18 +1,25 @@
 package main
 
 import (
-    "fmt"
-    "net/http"
+	"fmt"
+	"net/http"
 )
 
 func main() {
-    http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
-        fmt.Fprintf(w, "Welcome to my website!")
-    })
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// fmt.Fprintf(w, "Welcome to my website!")
+		http.Redirect(w, r, "/static/about.html", http.StatusSeeOther)
+	})
 
-    fs := http.FileServer(http.Dir("static/"))
-    http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.Dir("static/"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
-    fmt.Println("starting server, listening on :80")
-    http.ListenAndServe(":80", nil)
+	port := "6767"
+
+	fmt.Printf("starting server, listening on: %s\n", port)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil)
+
+	if err != nil {
+		fmt.Println("error: ", err)
+	}
 }
