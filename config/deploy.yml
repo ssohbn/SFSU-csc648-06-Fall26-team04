@@ -10,6 +10,11 @@ proxy:
   app_port: 6767
   healthcheck:
     path: /up
+  run:
+    publish: false
+    options:
+      publish:
+        - "127.0.0.1:6767:80"
 
 registry:
   server: localhost:5555

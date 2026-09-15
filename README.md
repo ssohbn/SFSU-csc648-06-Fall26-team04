@@ -27,6 +27,10 @@ The committed Kamal config deploys over SSH to `student@159.198.74.249` and
 uses Kamal's local registry. It uses your normal local SSH key, so GitHub
 secrets and GHCR credentials are not required.
 
+The server's existing Caddy service remains on ports 80 and 443. Caddy sends
+requests to Kamal's proxy on `127.0.0.1:6767`, and that proxy sends them to the
+application container on port 6767. The application is not exposed directly.
+
 Before the first deploy, Docker must be installed on the server and `student`
 must be allowed to use it. Then install Kamal locally and run setup:
 
@@ -42,3 +46,8 @@ RBENV_VERSION=3.2.2 rbenv exec kamal deploy
 ```
 
 The app is served over HTTP at <http://159.198.74.249>.
+
+For the first cutover, stop the existing `go run main.go` process only after
+Docker is ready, then run `kamal setup`. This frees port 6767 for Kamal's proxy;
+later `kamal deploy` runs replace the application container without changing
+Caddy.
