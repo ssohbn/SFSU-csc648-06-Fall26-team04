@@ -1,31 +1,22 @@
 service: sfsu-csc648-team04
-image: ssohbn/sfsu-csc648-06-fall26-team04
+image: sfsu-csc648-06-fall26-team04
 minimum_version: 2.12.0
 
 servers:
   web:
-    - schoolscheduler.me
+    - 159.198.74.249
 
 proxy:
-  host: schoolscheduler.me
-  ssl: true
   app_port: 6767
   healthcheck:
     path: /up
 
 registry:
-  server: ghcr.io
-  username:
-    - KAMAL_REGISTRY_USERNAME
-  password:
-    - KAMAL_REGISTRY_PASSWORD
+  server: localhost:5555
 
 builder:
   arch: amd64
 
 ssh:
-  user: ubuntu
-  keys_only: true
-  key_data:
-    - KAMAL_SSH_PRIVATE_KEY
+  user: student
   forward_agent: false

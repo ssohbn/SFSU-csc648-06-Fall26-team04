@@ -23,16 +23,22 @@ docker run --rm --publish 6767:6767 team04
 
 ## Deploy with Kamal
 
-The committed Kamal config deploys the app to `schoolscheduler.me` as the
-`ubuntu` user, publishes the image to GitHub Container Registry, and enables
-automatic HTTPS. Before the first deploy:
+The committed Kamal config deploys over SSH to `student@159.198.74.249` and
+uses Kamal's local registry. It uses your normal local SSH key, so GitHub
+secrets and GHCR credentials are not required.
 
-1. Install Docker on the Ubuntu VM and grant the `ubuntu` user access to it.
-2. Point `schoolscheduler.me` at the VM and allow inbound ports 80, 443, and 22.
-3. Add one repository Actions secret named `KAMAL_SSH_PRIVATE_KEY`. Its public
-   key must be authorized for `ubuntu` on the VM.
-4. From the `main` branch in GitHub Actions, run **Container and deploy**,
-   choose `setup` once, then use `deploy` for later releases.
+Before the first deploy, Docker must be installed on the server and `student`
+must be allowed to use it. Then install Kamal locally and run setup:
 
-GitHub's short-lived `GITHUB_TOKEN` authenticates to the container registry;
-no registry password or application secrets are stored in the repository.
+```sh
+RBENV_VERSION=3.2.2 rbenv exec gem install kamal --version 2.12.0 --no-document
+RBENV_VERSION=3.2.2 rbenv exec kamal setup
+```
+
+For later releases:
+
+```sh
+RBENV_VERSION=3.2.2 rbenv exec kamal deploy
+```
+
+The app is served over HTTP at <http://159.198.74.249>.

@@ -1,17 +1,11 @@
-name: Container and deploy
+name: Container
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      command:
-        description: Kamal command to run
-        required: true
-        default: deploy
-        type: choice
-        options:
-          - deploy
-          - setup
 
 permissions:
   contents: read
@@ -37,26 +31,3 @@ jobs:
 
           docker logs "$container_id"
           exit 1
-
-  deploy:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-    needs: container
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    concurrency:
-      group: production
-      cancel-in-progress: false
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Kamal
-        run: gem install kamal --version 2.12.0 --no-document
-      - name: Run Kamal
-        run: kamal "$KAMAL_COMMAND"
-        env:
-          KAMAL_COMMAND: ${{ inputs.command }}
-          KAMAL_REGISTRY_USERNAME: ${{ github.actor }}
-          KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-          KAMAL_SSH_PRIVATE_KEY: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
