@@ -4,7 +4,7 @@ Team 4's CSC 648 project.
 
 ## Run locally
 
-Go 1.26.4 is required:
+Go 1.26.8 is required:
 
 ```sh
 cd app
@@ -31,8 +31,8 @@ automatic HTTPS. Before the first deploy:
 2. Point `schoolscheduler.me` at the VM and allow inbound ports 80, 443, and 22.
 3. Add one repository Actions secret named `KAMAL_SSH_PRIVATE_KEY`. Its public
    key must be authorized for `ubuntu` on the VM.
-4. In GitHub Actions, run **Container and deploy**, choose `setup` once, then
-   use `deploy` for later releases.
+4. From the `main` branch in GitHub Actions, run **Container and deploy**,
+   choose `setup` once, then use `deploy` for later releases.
 
 GitHub's short-lived `GITHUB_TOKEN` authenticates to the container registry;
 no registry password or application secrets are stored in the repository.
