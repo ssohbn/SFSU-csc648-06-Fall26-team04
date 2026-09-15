@@ -1,0 +1,62 @@
+name: Container and deploy
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: Kamal command to run
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - setup
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build and smoke test
+        run: |
+          docker build --tag team04:test .
+          container_id="$(docker run --detach --publish 6767:6767 team04:test)"
+          trap 'docker rm --force "$container_id"' EXIT
+
+          for _ in {1..10}; do
+            if curl --fail --silent http://127.0.0.1:6767/up; then
+              curl --fail --silent --output /dev/null http://127.0.0.1:6767/static/aboutPage.html
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker logs "$container_id"
+          exit 1
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: container
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    env:
+      KAMAL_COMMAND: ${{ inputs.command }}
+      KAMAL_REGISTRY_USERNAME: ${{ github.actor }}
+      KAMAL_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      KAMAL_SSH_PRIVATE_KEY: ${{ secrets.KAMAL_SSH_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Kamal
+        run: gem install kamal --version 2.12.0 --no-document
+      - name: Run Kamal
+        run: kamal "$KAMAL_COMMAND"
