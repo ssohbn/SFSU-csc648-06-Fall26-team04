@@ -46,7 +46,6 @@ func main() {
 	})
 
 	http.HandleFunc("/studygroups/", func(w http.ResponseWriter, r *http.Request) {
-		log.Print("studygroups handler was called!!!!!")
 		tmpl := template.Must(basetemplate.Clone())
 		tmpl = template.Must(tmpl.ParseFiles("./templates/search.html"))
 

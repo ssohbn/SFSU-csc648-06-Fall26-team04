@@ -1,6 +1,53 @@
-<h1>search goes here</h1>
+<h1>search groups page</h1>
+<input type="search" name="" placeholder="studygroup">
+<input type="search" name="" placeholder="interest filter">
+<select multiple>
+	<option>cs</option>
+	<option>in person</option>
+	<option>online</option>
+	<option>art</option>
+	<option>cscc415</option>
+	<option>csc615</option>
+	<option>discrete math</option>
+	<option>linear algebra</option>
+
+</select>
+<input type="checkbox" id="filterowninterests" name="filterowninterests" value="filterowninterests">
+<label for="filterowninterests">filter only by own interests</label><br>
+
+<input type="checkbox" id="filterowngroups" name="filterowngroups" value="filterowngroups">
+<label for="filterowngroups">filter only by own groups</label><br>
+
 <h1>results</h1>
 <div>
-<p>result</p>
-<button>enroll</button>
+	<table>
+		<thead>
+			<tr>
+				<th>group</th>
+				<th>shortdesc</th>
+				<th>topics</th>
+				<th>enroll</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>compsci</td>
+				<td>learn cs at sfsu</td>
+				<td>cs, sfsu, in person</td>
+				<td><button>enroll</button> </td>
+			</tr>
+			<tr>
+				<td>art</td>
+				<td>study and make art together</td>
+				<td>sfsu, in person, art, art history</td>
+				<td><button>enroll</button> </td>
+			</tr>
+			<tr>
+				<td>music</td>
+				<td>online music studying and sharing</td>
+				<td>music, online, music sharing</td>
+				<td><button>enroll</button> </td>
+			</tr>
+		</tbody>
+	</table>
 </div>
