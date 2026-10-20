@@ -1,30 +1,128 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
+type StudyGroup struct {
+	Name             string
+	ShortDescription string
+	LongDescription  string
+}
+
+func isHTMXRequest(r *http.Request) bool {
+	return r.Header.Get("HX-Request") == "true"
+}
+
 func main() {
-	tmpl := template.Must(template.ParseFiles("./static/templates/base.html",
-		"./static/templates/footer.html",
-		"./static/templates/header.html",
-	))
+	db, err := sql.Open("sqlite3", "./database.sqlite3")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer db.Close()
+
+	basetemplate := template.Must(template.ParseFiles("./templates/base.html"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		type Page struct {
-			Body string
-		}
+		tmpl := template.Must(basetemplate.Clone())
+		tmpl = template.Must(tmpl.ParseFiles("./templates/home.html"))
 
-		err := tmpl.Execute(w, &Page{Body: "<h1>hi</h1>"})
+		tmpl.ExecuteTemplate(w, "base", nil)
+	})
 
+	http.HandleFunc("/about/", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.Must(basetemplate.Clone())
+		tmpl = template.Must(tmpl.ParseFiles("./templates/about.html"))
+
+		tmpl.ExecuteTemplate(w, "base", nil)
+	})
+
+	http.HandleFunc("/studygroups/", func(w http.ResponseWriter, r *http.Request) {
+		log.Print("studygroups handler was called!!!!!")
+		tmpl := template.Must(basetemplate.Clone())
+		tmpl = template.Must(tmpl.ParseFiles("./templates/search.html"))
+
+		// this template has a search bar
+		// grab its query!
+		query := r.FormValue("query")
+
+		var matches []StudyGroup
+
+		// search everything ever using query
+		//
+		// theyre calling it the worst optimized query of all time
+		//
+		// theyre also asking about when maeve has ever cared about optimization
+		// rows, err := db.Query("SELECT Name, ShortDescription, LongDescription FROM StudyGroups WHERE LOWER(Name) LIKE LOWER('%?%') OR LOWER(ShortDescription) LIKE LOWER('%?%') OR LOWER(LongDescription) LIKE LOWER('%?%')", query, query, query)
+		rows, err := db.Query("SELECT Name, ShortDescription, LongDescription FROM StudyGroups "+
+			"WHERE LOWER(Name) LIKE LOWER('%' || ? || '%')"+
+			"OR LOWER(ShortDescription) LIKE LOWER('%' || ? || '%')"+
+			"OR LOWER(LongDescription) LIKE LOWER('%' || ? || '%')", query, query, query)
 		if err != nil {
-			fmt.Printf("err: %v\n", err)
+			log.Fatal(err)
 
 		}
-		// http.Redirect(w, r, "/static/aboutPage.html", http.StatusSeeOther)
+		defer rows.Close()
+
+		for rows.Next() {
+
+			var group StudyGroup
+
+			// driver cant bind NULL to string so we use this special type to error check it and do what we want
+			var longdesc sql.NullString
+
+			err = rows.Scan(&group.Name, &group.ShortDescription, &longdesc)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if longdesc.Valid {
+				// valid long description should just be the description
+				group.LongDescription = longdesc.String
+			} else {
+				// null description should just be empty
+				group.LongDescription = ""
+
+			}
+
+			matches = append(matches, group)
+		}
+
+		// this is checked last in the example I read
+		// (https://github.com/mattn/go-sqlite3/blob/v1.14.52/_example/simple/simple.go)
+		// im not sure if theres a reason for this going after rows.Next
+		err = rows.Err()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		type SearchStudyGroups struct {
+			Placeholder string
+			Groups      []StudyGroup
+		}
+
+		// send the whole page by default
+		template := "base"
+
+		if isHTMXRequest(r) {
+			// send only the partial if request sent by htmx
+			template = "rows"
+		}
+
+		// do not cache anything with HX-Request present
+		w.Header().Add("Vary", "HX-Request")
+
+		tmpl.ExecuteTemplate(w, template, &SearchStudyGroups{
+			Placeholder: "search groups here",
+			Groups:      matches})
 	})
 
 	fs := http.FileServer(http.Dir("static/"))

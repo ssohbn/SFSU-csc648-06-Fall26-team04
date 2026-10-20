@@ -1,0 +1,45 @@
+{{define "base"}}
+<!doctype html>
+<html>
+
+<head>
+	<!-- our site uses htmx to avoid writing js (its annoying and more fun to just do everything in go)-->
+	<script defer src="/static/js/htmx.min.js"></script>
+
+	<!-- our styling! -->
+	<link rel="stylesheet" href="/static/style.css">
+
+	<!-- prevents partials on cache miss -->
+	<meta name="htmx-config" content='{
+                "historyRestoreAsHxRequest": false
+            }'>
+
+</head>
+{{template "header" .}}
+
+<body>
+	{{template "content" .}}
+</body>
+
+{{template "footer" .}}
+
+</html>
+{{end}}
+
+{{define "header"}}
+<header>
+	<h1>header</h1>
+	<p>logo</p>
+	<p>something else</p>
+	<p>something else</p>
+
+</header>
+{{end}}
+
+{{define "footer"}}
+<header>
+	<h1>footer</h1>
+	<p>about</p>
+	<p>source code</p>
+</header>
+{{end}}
