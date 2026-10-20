@@ -1,12 +1,16 @@
+
+/* General page styling */
 body {
     font-family: Arial, sans-serif;
     background-color: #f2f2f2;
     margin: 40px;
 }
+
 h1 {
     text-align: center;
 }
 
+/* About page team members */
 .member {
     background-color: white;
     border: 1px solid #ccc;
@@ -28,4 +32,156 @@ h1 {
         height: 100px;
         object-fit: cover;
         border-radius: 8px;
+    }
+
+/* Search groups page */
+.search-page {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+    .search-page h1 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+
+.subtitle {
+    text-align: center;
+    color: #777;
+    margin-bottom: 30px;
+}
+
+/* Search and filter section */
+.search-section {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+    .search-section h2, .results-section h2 {
+        color: #2c3e50;
+        margin-top: 0;
+    }
+
+/* Search fields */
+.search-fields {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+    .search-fields input[type="search"] {
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+        flex: 1;
+        min-width: 180px;
+    }
+
+/* Interest dropdown */
+.interest-dropdown {
+    position: relative;
+    width: 200px;
+    font-size: 14px;
+}
+
+    .interest-dropdown summary {
+        background-color: white;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 12px;
+        cursor: pointer;
+    }
+
+.dropdown-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 5px 0;
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px #ddd;
+    z-index: 1;
+}
+
+    .dropdown-options label {
+        display: block;
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+
+        .dropdown-options label:hover {
+            background-color: #f2f2f2;
+        }
+
+/* Additional filter checkboxes */
+.filter-options {
+    margin-top: 20px;
+}
+
+    .filter-options label {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: #444;
+    }
+
+    .filter-options input[type="checkbox"] {
+        margin-right: 8px;
+    }
+
+/* Results section */
+.results-section {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 25px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+/* Results table */
+table {
+    width: 100%;
+    background-color: white;
+    border-collapse: collapse;
+}
+
+th {
+    background-color: #2c3e50;
+    color: white;
+    text-align: left;
+    padding: 15px;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Enroll buttons */
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+    button:hover {
+        background-color: #2980b9;
     }

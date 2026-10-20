@@ -1,53 +1,94 @@
-<h1>search groups page</h1>
-<input type="search" name="" placeholder="studygroup">
-<input type="search" name="" placeholder="interest filter">
-<select multiple>
-	<option>cs</option>
-	<option>in person</option>
-	<option>online</option>
-	<option>art</option>
-	<option>cscc415</option>
-	<option>csc615</option>
-	<option>discrete math</option>
-	<option>linear algebra</option>
 
-</select>
-<input type="checkbox" id="filterowninterests" name="filterowninterests" value="filterowninterests">
-<label for="filterowninterests">filter only by own interests</label><br>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Search Groups</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
 
-<input type="checkbox" id="filterowngroups" name="filterowngroups" value="filterowngroups">
-<label for="filterowngroups">filter only by own groups</label><br>
+<body>
+    <div class="search-page">
 
-<h1>results</h1>
-<div>
-	<table>
-		<thead>
-			<tr>
-				<th>group</th>
-				<th>shortdesc</th>
-				<th>topics</th>
-				<th>enroll</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td>compsci</td>
-				<td>learn cs at sfsu</td>
-				<td>cs, sfsu, in person</td>
-				<td><button>enroll</button> </td>
-			</tr>
-			<tr>
-				<td>art</td>
-				<td>study and make art together</td>
-				<td>sfsu, in person, art, art history</td>
-				<td><button>enroll</button> </td>
-			</tr>
-			<tr>
-				<td>music</td>
-				<td>online music studying and sharing</td>
-				<td>music, online, music sharing</td>
-				<td><button>enroll</button> </td>
-			</tr>
-		</tbody>
-	</table>
-</div>
+        <h1>Search Study Groups</h1>
+        <p class="subtitle">Find study groups based on your interests.</p>
+
+        <!-- Search and filter section -->
+        <div class="search-section">
+            <h2>Search and Filters</h2>
+
+            <div class="search-fields">
+                <input type="search" name="group" placeholder="Search groups...">
+                <input type="search" name="interest" placeholder="Search interests...">
+
+                <details class="interest-dropdown">
+                    <summary>Select Interests</summary>
+                    <div class="dropdown-options">
+                        <label><input type="checkbox" value="cs"> CS</label>
+                        <label><input type="checkbox" value="in person"> In Person</label>
+                        <label><input type="checkbox" value="online"> Online</label>
+                        <label><input type="checkbox" value="art"> Art</label>
+                        <label><input type="checkbox" value="csc415"> CSC 415</label>
+                        <label><input type="checkbox" value="csc615"> CSC 615</label>
+                        <label><input type="checkbox" value="discrete math"> Discrete Math</label>
+                        <label><input type="checkbox" value="linear algebra"> Linear Algebra</label>
+                    </div>
+                </details>
+            </div>
+
+            <div class="filter-options">
+                <label>
+                    <input type="checkbox" id="filterowninterests" name="filterowninterests">
+                    Filter only by my interests
+                </label>
+
+                <label>
+                    <input type="checkbox" id="filterowngroups" name="filterowngroups">
+                    Filter only by my groups
+                </label>
+            </div>
+        </div>
+
+        <!-- Results section -->
+        <div class="results-section">
+            <h2>Search Results</h2>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Group</th>
+                            <th>Description</th>
+                            <th>Topics</th>
+                            <th>Enroll</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <td>CompSci</td>
+                            <td>Learn CS at SFSU</td>
+                            <td>CS, SFSU, In Person</td>
+                            <td><button>Enroll</button></td>
+                        </tr>
+
+                        <tr>
+                            <td>Art</td>
+                            <td>Study and make art together</td>
+                            <td>SFSU, In Person, Art, Art History</td>
+                            <td><button>Enroll</button></td>
+                        </tr>
+
+                        <tr>
+                            <td>Music</td>
+                            <td>Online music studying and sharing</td>
+                            <td>Music, Online, Music Sharing</td>
+                            <td><button>Enroll</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
