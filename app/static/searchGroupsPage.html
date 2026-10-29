@@ -1,94 +1,69 @@
-
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Search Groups</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Search Study Groups</title>
     <link rel="stylesheet" href="./style.css">
+    <script src="https://unpkg.com/htmx.org"></script>
 </head>
 
 <body>
-    <div class="search-page">
+    <main class="search-page">
+        <header>
+            <h1>Search Study Groups</h1>
+            <p class="subtitle">Find groups by name or description.</p>
+        </header>
 
-        <h1>Search Study Groups</h1>
-        <p class="subtitle">Find study groups based on your interests.</p>
+        <!-- search box stuff -->
+        <section class="search-section" aria-labelledby="search-heading">
+            <h2 id="search-heading">Search groups</h2>
 
-        <!-- Search and filter section -->
-        <div class="search-section">
-            <h2>Search and Filters</h2>
+            <!-- go reads the search text from the "query" parameter. -->
+            <form class="search-fields"
+                  action="/studygroups/"
+                  method="get"
+                  hx-get="/studygroups/"
+                  hx-trigger="input changed delay:300ms, submit"
+                  hx-target="#search-results"
+                  hx-swap="innerHTML"
+                  hx-sync="this:replace">
 
-            <div class="search-fields">
-                <input type="search" name="group" placeholder="Search groups...">
-                <input type="search" name="interest" placeholder="Search interests...">
-
-                <details class="interest-dropdown">
-                    <summary>Select Interests</summary>
-                    <div class="dropdown-options">
-                        <label><input type="checkbox" value="cs"> CS</label>
-                        <label><input type="checkbox" value="in person"> In Person</label>
-                        <label><input type="checkbox" value="online"> Online</label>
-                        <label><input type="checkbox" value="art"> Art</label>
-                        <label><input type="checkbox" value="csc415"> CSC 415</label>
-                        <label><input type="checkbox" value="csc615"> CSC 615</label>
-                        <label><input type="checkbox" value="discrete math"> Discrete Math</label>
-                        <label><input type="checkbox" value="linear algebra"> Linear Algebra</label>
-                    </div>
-                </details>
-            </div>
-
-            <div class="filter-options">
-                <label>
-                    <input type="checkbox" id="filterowninterests" name="filterowninterests">
-                    Filter only by my interests
+                <label class="visually-hidden" for="group-query">
+                    Search study groups
                 </label>
+                <input id="group-query"
+                       type="search"
+                       name="query"
+                       placeholder="Search groups..."
+                       autocomplete="off">
 
-                <label>
-                    <input type="checkbox" id="filterowngroups" name="filterowngroups">
-                    Filter only by my groups
-                </label>
-            </div>
-        </div>
+                <button type="submit">Search</button>
+            </form>
+        </section>
 
-        <!-- Results section -->
-        <div class="results-section">
-            <h2>Search Results</h2>
+        <!-- search results go here -->
+        <section class="results-section" aria-labelledby="results-heading">
+            <h2 id="results-heading">Search results</h2>
 
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Group</th>
-                            <th>Description</th>
-                            <th>Topics</th>
-                            <th>Enroll</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Short Description</th>
+                            <th scope="col">Long Description</th>
                         </tr>
                     </thead>
-
-                    <tbody>
+                    <tbody id="search-results">
+                        <!-- HTMX replaces this message with rows from go -->
                         <tr>
-                            <td>CompSci</td>
-                            <td>Learn CS at SFSU</td>
-                            <td>CS, SFSU, In Person</td>
-                            <td><button>Enroll</button></td>
-                        </tr>
-
-                        <tr>
-                            <td>Art</td>
-                            <td>Study and make art together</td>
-                            <td>SFSU, In Person, Art, Art History</td>
-                            <td><button>Enroll</button></td>
-                        </tr>
-
-                        <tr>
-                            <td>Music</td>
-                            <td>Online music studying and sharing</td>
-                            <td>Music, Online, Music Sharing</td>
-                            <td><button>Enroll</button></td>
+                            <td colspan="3">Enter a search to find study groups.</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
-
-    </div>
+        </section>
+    </main>
 </body>
 </html>
