@@ -16,6 +16,15 @@ type StudyGroup struct {
 	LongDescription  string
 }
 
+type Interest struct {
+	ID   int
+	Name string
+}
+
+type InterestSearchResults struct {
+	Interests []Interest
+}
+
 func isHTMXRequest(r *http.Request) bool {
 	return r.Header.Get("HX-Request") == "true"
 }
@@ -123,6 +132,62 @@ func main() {
 			Placeholder: "search groups here",
 			Groups:      matches})
 	})
+
+	http.HandleFunc("/interests/", func(w http.ResponseWriter, r *http.Request) {
+    // build this page on top of the normal site layout
+    tmpl := template.Must(basetemplate.Clone())
+    tmpl = template.Must(tmpl.ParseFiles("./templates/interests.html"))
+
+    // grab whatever was typed into the search box
+    query := r.FormValue("query")
+
+    // find interest names that contain the search text
+    rows, err := db.Query(
+        "SELECT Id, Name FROM Interests "+
+            "WHERE LOWER(Name) LIKE LOWER('%' || ? || '%') "+
+            "ORDER BY Name",
+        query,
+    )
+    if err != nil {
+        log.Printf("interest search query failed: %v", err)
+        http.Error(w, "Could not search interests", http.StatusInternalServerError)
+        return
+    }
+    defer rows.Close()
+
+    // make a list for the template to display
+    results := InterestSearchResults{}
+    for rows.Next() {
+        var interest Interest
+        // copy this database row into an Interest
+        if err := rows.Scan(&interest.ID, &interest.Name); err != nil {
+            log.Printf("could not read interest row: %v", err)
+            http.Error(w, "Could not read interests", http.StatusInternalServerError)
+            return
+        }
+
+        results.Interests = append(results.Interests, interest)
+    }
+
+    // check whether an error happened while reading the rows
+    if err := rows.Err(); err != nil {
+        log.Printf("interest search rows failed: %v", err)
+        http.Error(w, "Could not read interests", http.StatusInternalServerError)
+        return
+    }
+    page := "base"
+    if isHTMXRequest(r) {
+        page = "interest-rows"
+    }
+
+    // tell caches that the response changes based on the htmx header
+    w.Header().Add("Vary", "HX-Request")
+
+    // render the page or just the matching rows
+    if err := tmpl.ExecuteTemplate(w, page, results); err != nil {
+        log.Printf("could not render interests: %v", err)
+    }
+})
 
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))

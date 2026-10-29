@@ -1,0 +1,33 @@
+{{define "content"}}
+<h1>add/search interests</h1>
+
+<input type="search"
+       name="query"
+       placeholder="interest"
+       hx-get="/interests/"
+       hx-trigger="input changed delay:300ms"
+       hx-target="#interest-results">
+
+<table>
+    <thead>
+        <tr>
+            <th>interest</th>
+        </tr>
+    </thead>
+    <tbody id="interest-results">
+        {{template "interest-rows" .}}
+    </tbody>
+</table>
+{{end}}
+
+{{define "interest-rows"}}
+{{range .Interests}}
+<tr>
+    <td>{{.Name}}</td>
+</tr>
+{{else}}
+<tr>
+    <td>No interests found.</td>
+</tr>
+{{end}}
+{{end}}
