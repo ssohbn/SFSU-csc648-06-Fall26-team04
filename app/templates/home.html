@@ -1,100 +1,82 @@
 {{define "content"}}
-<header>
-	<h1>Search Study Groups</h1>
-	<p class="subtitle">Find groups by name, topic or where they meet.</p>
-</header>
+<div class="wrap home">
+	<section class="home-search" aria-labelledby="home-heading">
+		{{template "flash" .}}
+		<h1 id="home-heading">Find your group</h1>
+		<p class="lead">Browse study groups on the map, or search by name, topic or place.</p>
 
-<!-- search box stuff -->
-<section class="search-section" aria-labelledby="search-heading">
-	<h2 id="search-heading">Search groups</h2>
+		<!-- go reads the search text from "query" and the filters from "topic", "match" and "mine".
+			no "changed" in hx-trigger: htmx checks it with .value, which never changes on a checkbox -->
+		<form action="/" method="get" hx-get="/" hx-trigger="input delay:300ms, submit"
+			hx-target="#search-results" hx-swap="innerHTML" hx-sync="this:replace" hx-push-url="true">
+			<div class="search-row">
+				<label class="visually-hidden" for="group-query">Search study groups</label>
+				<input id="group-query" type="search" name="query" value="{{.Query}}"
+					placeholder="Search groups" autocomplete="off">
+				<button type="submit">Search</button>
+			</div>
 
-	<!-- go reads the search text from "query" and the filters from "topic", "match" and "mine".
-		no "changed" in hx-trigger: htmx checks it with .value, which never changes on a checkbox -->
-	<form class="search-fields" action="/" method="get" hx-get="/" hx-trigger="input delay:300ms, submit"
-		hx-target="#search-results" hx-swap="innerHTML" hx-sync="this:replace" hx-push-url="true">
-		<label class="visually-hidden" for="group-query">Search study groups</label>
-		<input id="group-query" type="search" name="query" value="{{.Query}}" placeholder="Search groups..."
-			autocomplete="off">
+			{{if or .User .Topics}}
+			<div class="filters">
+				{{if .User}}
+				<fieldset class="filter-group">
+					<legend>Show only</legend>
+					<div class="chip-list">
+						<label class="chip-toggle"><input type="checkbox" name="match" value="1" {{if .Match}}checked{{end}}><span>Shares my interests</span></label>
+						<label class="chip-toggle"><input type="checkbox" name="mine" value="1" {{if .Mine}}checked{{end}}><span>My groups</span></label>
+					</div>
+				</fieldset>
+				{{end}}
 
-		{{with .Topics}}
-		<details class="interest-dropdown">
-			<summary>Filter by topic</summary>
-			<div class="dropdown-options">
-				{{range .}}
-				<label><input type="checkbox" name="topic" value="{{.ID}}" {{if index $.Picked .ID}}checked{{end}}>
-					{{.Name}}</label>
+				{{with .Topics}}
+				<fieldset class="filter-group">
+					<legend>Topics</legend>
+					<div class="chip-list">
+						{{range .}}
+						<label class="chip-toggle"><input type="checkbox" name="topic" value="{{.ID}}" {{if index $.Picked .ID}}checked{{end}}><span>{{.Name}}</span></label>
+						{{end}}
+					</div>
+				</fieldset>
 				{{end}}
 			</div>
-		</details>
-		{{end}}
-
-		<button type="submit">Search</button>
+			{{end}}
+		</form>
 
 		{{if .User}}
-		<div class="filter-options">
-			<label><input type="checkbox" name="match" value="1" {{if .Match}}checked{{end}}> Only groups that share my
-				interests</label>
-			<label><input type="checkbox" name="mine" value="1" {{if .Mine}}checked{{end}}> Only my groups</label>
-		</div>
+		<p class="hint home-hint">Can't find one? <a href="/groups/new">Start a group</a>.</p>
+		{{else}}
+		<p class="hint home-hint"><a href="/signup">Sign up</a> to join groups and see the ones for signed-in students.</p>
 		{{end}}
-	</form>
+	</section>
 
-	{{if .User}}
-	<p class="hint">Can't find one? <a href="/groups/new">Start a group</a>.</p>
-	{{else}}
-	<p class="hint"><a href="/signup">Sign up</a> to join groups and see the ones for signed-in students.</p>
-	{{end}}
-</section>
+	<section class="home-results" aria-labelledby="results-count">
+		<!-- the count lives in the swapped html, so a copy outside it tells screen readers what changed -->
+		<p id="results-status" class="visually-hidden" role="status"></p>
+		<div id="search-results"
+			hx-on::after-swap="document.getElementById('results-status').textContent = document.getElementById('results-count').textContent">
+			{{template "rows" .}}
+		</div>
+	</section>
 
-<!-- map.js shows this once the map can draw, the list below works without it -->
-<section class="panel map-section" aria-labelledby="map-heading" hidden>
-	<h2 id="map-heading">Where they meet</h2>
-	<div id="groups-map" class="map" role="region" aria-label="Map of the study groups below"></div>
-	<p class="hint">Pins follow your search. Groups without a pin are only in the list.</p>
-</section>
-
-<!-- search results go here -->
-<section class="results-section" aria-labelledby="results-heading">
-	<h2 id="results-heading">Study groups</h2>
-
-	<div class="table-container">
-		<table>
-			<thead>
-				<tr>
-					<th scope="col">Group</th>
-					<th scope="col">Topics</th>
-					<th scope="col">Meets</th>
-					<th scope="col">Members</th>
-				</tr>
-			</thead>
-			<tbody id="search-results">
-				{{template "rows" .}}
-			</tbody>
-		</table>
+	<!-- after the list so tab reaches the results first, the grid still puts it on the right.
+		map.js shows it once the map can draw, the list works without it -->
+	<div class="home-map map-section" hidden>
+		<div id="groups-map" class="map" role="region" aria-label="Map of the study groups in the list"></div>
 	</div>
-</section>
+</div>
 {{end}}
 
 {{define "rows"}}
-{{range .Groups}}
-{{template "row" .}}
+{{with .Groups}}
+<h2 id="results-count" class="results-count">{{len .}} {{if eq (len .) 1}}study group{{else}}study groups{{end}}</h2>
+<ol class="cards">
+	{{range .}}{{template "card" .}}{{end}}
+</ol>
 {{else}}
-<tr>
-	<td colspan="4">No study groups match your search.</td>
-</tr>
+<h2 id="results-count" class="results-count">0 study groups</h2>
+<div class="empty">
+	<p class="empty-title">No study groups match your search.</p>
+	<p class="hint">Try fewer words, or clear the topic filters.</p>
+</div>
 {{end}}
-{{end}}
-
-{{define "row"}}
-<tr{{with .Pin}} data-lat="{{.Lat}}" data-lng="{{.Lng}}"{{end}}>
-	<td>
-		<a href="/groups/{{.ID}}">{{.Name}}</a>
-		{{if ne .Mode "OPEN"}}<span class="badge">{{.ModeLabel}}</span>{{end}}
-		{{with .Role}}<span class="badge">{{if eq . "ADMIN"}}Yours{{else}}Joined{{end}}</span>{{end}}
-		<br><span class="hint">{{.ShortDescription}}</span>
-	</td>
-	<td>{{range $i, $t := .Interests}}{{if $i}}, {{end}}{{$t.Name}}{{end}}</td>
-	<td class="meets">{{.MeetingPlace}}{{with .MeetingTime}}{{if $.MeetingPlace}}<br>{{end}}<span class="hint">{{.}}</span>{{end}}</td>
-	<td>{{.Members}}</td>
-</tr>
 {{end}}

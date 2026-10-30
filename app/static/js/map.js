@@ -1,6 +1,6 @@
 // maps for the home page, group pages and the group form, drawn with maplibre.
-// every map sits in a hidden .map-section, so without webgl the page just
-// keeps working without it.
+// every map sits in a hidden .map-section, so without webgl, or when the map
+// style can't load, the page just keeps working without it.
 (() => {
 	const style = 'https://tiles.openfreemap.org/styles/positron';
 	const sfsu = [-122.4799957, 37.7245167];
@@ -10,45 +10,79 @@
 	if (!window.maplibregl || !(canvas.getContext('webgl2') || canvas.getContext('webgl'))) return;
 
 	const newMap = (el, options) => {
-		el.closest('.map-section').hidden = false;
+		const section = el.closest('.map-section');
+		section.hidden = false;
 		const map = new maplibregl.Map({
 			container: el, style, center: sfsu, zoom: 11,
 			// page scrolling stays page scrolling, zoom with ctrl or two fingers
 			cooperativeGestures: true,
+			// a short credit in the corner, compact mode opens as a box over small maps
+			attributionControl: { compact: false },
 			...options,
 		});
 		map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+		// a tile that fails after the style loaded is fine, but without the style there is no map
+		let styled = false;
+		map.once('styledata', () => { styled = true; });
+		map.on('error', () => {
+			if (styled || section.hidden) return;
+			section.hidden = true;
+			map.remove();
+		});
 		return map;
 	};
 	const pinAt = (el) => [Number(el.dataset.lng), Number(el.dataset.lat)];
+	// a pin repeats what the page says in text, so tab and screen readers skip it.
+	// the tabindex has to be set before setPopup, which only adds one if it's missing
+	const newPin = (options) => {
+		const marker = new maplibregl.Marker({ color: pinColor, ...options });
+		marker.getElement().tabIndex = -1;
+		marker.getElement().setAttribute('aria-hidden', 'true');
+		return marker;
+	};
 
-	// home: a pin for each group in the results, redrawn when htmx swaps them
+	// home: a pin for each group card in the results, redrawn when htmx swaps them
 	const home = document.getElementById('groups-map');
 	if (home) {
 		const map = newMap(home);
-		let markers = [];
+		const section = home.closest('.map-section');
+		const results = document.getElementById('search-results');
+		const byCard = new Map();
+		let active = null;
 		const draw = (animate) => {
-			markers.forEach((m) => m.remove());
-			markers = [];
+			if (section.hidden) return;
+			byCard.forEach((m) => m.remove());
+			byCard.clear();
+			active = null;
 			const bounds = new maplibregl.LngLatBounds();
-			for (const row of document.querySelectorAll('#search-results tr[data-lat]')) {
-				const at = pinAt(row);
+			for (const card of results.querySelectorAll('.card[data-lat]')) {
+				const at = pinAt(card);
 				const box = document.createElement('div');
-				const meets = document.createElement('p');
-				meets.append(...row.querySelector('.meets').cloneNode(true).childNodes);
-				box.append(row.querySelector('a').cloneNode(true), meets);
-				markers.push(new maplibregl.Marker({ color: pinColor })
+				box.append(card.querySelector('a').cloneNode(true));
+				const meets = card.querySelector('.meets');
+				if (meets) box.append(meets.cloneNode(true));
+				byCard.set(card, newPin()
 					.setLngLat(at)
-					// the list below has the same links, so opening a popup leaves focus alone
-					.setPopup(new maplibregl.Popup({ offset: 30, maxWidth: '260px', focusAfterOpen: false }).setDOMContent(box))
+					// the list has the same links, so opening a popup leaves focus alone
+					.setPopup(new maplibregl.Popup({ maxWidth: '260px', focusAfterOpen: false }).setDOMContent(box))
 					.addTo(map));
 				bounds.extend(at);
 			}
-			if (markers.length) map.fitBounds(bounds, { padding: 60, maxZoom: 14, animate });
+			if (byCard.size) map.fitBounds(bounds, { padding: 60, maxZoom: 14, animate });
 		};
+		// the pin of the card under the mouse or keyboard focus stands out
+		const highlight = (card) => {
+			active?.getElement().classList.remove('is-active');
+			active = byCard.get(card) ?? null;
+			active?.getElement().classList.add('is-active');
+		};
+		results.addEventListener('mouseover', (e) => highlight(e.target.closest('.card')));
+		results.addEventListener('mouseleave', () => highlight(null));
+		results.addEventListener('focusin', (e) => highlight(e.target.closest('.card')));
+		results.addEventListener('focusout', () => highlight(null));
 		draw(false);
 		document.body.addEventListener('htmx:afterSwap', (e) => {
-			if (e.detail.target.id === 'search-results') draw(true);
+			if (e.detail.target === results) draw(true);
 		});
 	}
 
@@ -56,7 +90,7 @@
 	const group = document.getElementById('group-map');
 	if (group) {
 		const map = newMap(group, { center: pinAt(group), zoom: 15 });
-		new maplibregl.Marker({ color: pinColor }).setLngLat(pinAt(group)).addTo(map);
+		newPin().setLngLat(pinAt(group)).addTo(map);
 	}
 
 	// group form: click the map, drag the pin, or pin the center with the keyboard
@@ -67,8 +101,8 @@
 		const status = document.getElementById('pin-status');
 		const clear = document.getElementById('pin-clear');
 		const start = lat.value && lng.value ? [Number(lng.value), Number(lat.value)] : null;
-		const map = newMap(picker, start ? { center: start, zoom: 15 } : {});
-		const marker = new maplibregl.Marker({ color: pinColor, draggable: true });
+		const map = newMap(picker, start ? { center: start, zoom: 15 } : { zoom: 12 });
+		const marker = newPin({ draggable: true });
 		// a click on the pin also reaches the map, which would move the pin to the pointer
 		marker.getElement().addEventListener('click', (e) => e.stopPropagation());
 		const empty = 'Click the map to pin where you meet.';

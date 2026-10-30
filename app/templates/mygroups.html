@@ -1,39 +1,26 @@
 {{define "content"}}
-<header>
-	<h1>My Groups</h1>
-	<p class="subtitle">Groups you run or joined.</p>
-</header>
+<div class="wrap">
+	<header class="page-head page-head-row">
+		<div>
+			<h1>My groups</h1>
+			<p class="lead">Groups you run or joined.</p>
+		</div>
+		<a class="button" href="/groups/new">Start a group</a>
+	</header>
+	{{template "flash" .}}
 
-<p class="center"><a class="button" href="/groups/new">Start a group</a></p>
-
-<section class="results-section" aria-labelledby="my-groups-heading">
-	<h2 id="my-groups-heading">Your groups</h2>
-
-	<div class="table-container">
-		<table>
-			<thead>
-				<tr>
-					<th scope="col">Group</th>
-					<th scope="col">Meets</th>
-					<th scope="col">Members</th>
-					<th scope="col">You</th>
-				</tr>
-			</thead>
-			<tbody>
-				{{range .Groups}}
-				<tr>
-					<td><a href="/groups/{{.ID}}">{{.Name}}</a><br><span class="hint">{{.ShortDescription}}</span></td>
-					<td>{{.MeetingPlace}}{{with .MeetingTime}}<br><span class="hint">{{.}}</span>{{end}}</td>
-					<td>{{.Members}}</td>
-					<td>{{if eq .Role "ADMIN"}}Organizer{{else}}Member{{end}}</td>
-				</tr>
-				{{else}}
-				<tr>
-					<td colspan="4">You're not in any groups yet. <a href="/">Find one</a> or start your own.</td>
-				</tr>
-				{{end}}
-			</tbody>
-		</table>
-	</div>
-</section>
+	<section aria-labelledby="my-groups-heading">
+		<h2 id="my-groups-heading" class="visually-hidden">Your groups</h2>
+		{{with .Groups}}
+		<ol class="cards">
+			{{range .}}{{template "card" .}}{{end}}
+		</ol>
+		{{else}}
+		<div class="empty">
+			<p class="empty-title">You're not in any groups yet.</p>
+			<p class="hint"><a href="/">Find one</a> or start your own.</p>
+		</div>
+		{{end}}
+	</section>
+</div>
 {{end}}

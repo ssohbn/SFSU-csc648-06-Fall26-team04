@@ -426,7 +426,7 @@ func TestGroupPin(t *testing.T) {
 	if _, body, _ = gus.get(plain); strings.Contains(body, "openstreetmap.org") || strings.Contains(body, "maplibre") {
 		t.Errorf("a group without a pin draws no map: %s", body)
 	}
-	if _, rows, _ := gus.do(htmxGet(t, srv.URL+"/")); strings.Count(rows, "data-lat=") != 1 || !strings.Contains(rows, `<tr data-lat="37.7214011" data-lng="-122.4780847">`) {
+	if _, rows, _ := gus.do(htmxGet(t, srv.URL+"/")); strings.Count(rows, "data-lat=") != 1 || !strings.Contains(rows, `<li class="card" data-lat="37.7214011" data-lng="-122.4780847">`) {
 		t.Errorf("only the pinned row should carry coordinates: %s", rows)
 	}
 

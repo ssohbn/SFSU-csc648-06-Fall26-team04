@@ -1,105 +1,136 @@
 {{define "content"}}
-<header>
-	<h1>{{.Group.Name}}</h1>
-	<p class="subtitle">{{.Group.ShortDescription}}</p>
-</header>
+<div class="wrap">
+	<a class="back-link" href="/">All groups</a>
+	{{template "flash" .}}
 
-<section class="panel narrow" aria-labelledby="about-heading">
-	<h2 id="about-heading">About this group</h2>
-	{{with .Group.LongDescription}}<p class="prose">{{.}}</p>{{end}}
+	<header class="group-head">
+		<span class="badge">{{.Mode.Label}}</span>
+		<h1>{{.Group.Name}}</h1>
+		<p class="lead">{{.Group.ShortDescription}}</p>
+	</header>
 
-	<dl class="facts">
-		<dt>Who can join</dt>
-		<dd>{{.Mode.Label}}{{with .Group.SchoolDomain}} ({{.}}){{end}}<br><span class="hint">{{.Mode.Help}}</span></dd>
-		{{with .Group.MeetingPlace}}
-		<dt>Where</dt>
-		<dd>{{.}}</dd>
-		{{end}}
-		{{with .Group.MeetingTime}}
-		<dt>When</dt>
-		<dd>{{.}}</dd>
-		{{end}}
-		<dt>Members</dt>
-		<dd>{{.Group.Members}}</dd>
-	</dl>
+	<div class="group-layout">
+		<aside class="group-side" aria-label="Group details">
+			<section class="panel side-card">
+				<dl class="facts">
+					<div>
+						<dt>Who can join</dt>
+						<dd>{{.Mode.Label}}{{with .Group.SchoolDomain}} ({{.}}){{end}}<span class="hint">{{.Mode.Help}}</span></dd>
+					</div>
+					{{with .Group.MeetingPlace}}
+					<div>
+						<dt>Where</dt>
+						<dd>{{.}}</dd>
+					</div>
+					{{end}}
+					{{with .Group.MeetingTime}}
+					<div>
+						<dt>When</dt>
+						<dd>{{.}}</dd>
+					</div>
+					{{end}}
+					<div>
+						<dt>Members</dt>
+						<dd>{{.Group.Members}} {{if eq .Group.Members 1}}member{{else}}members{{end}}</dd>
+					</div>
+				</dl>
 
-	{{with .Group.Pin}}
-	<div class="map-section" hidden>
-		<div id="group-map" class="map small" data-lat="{{.Lat}}" data-lng="{{.Lng}}" role="region"
-			aria-label="Map of where the group meets"></div>
-	</div>
-	<p class="hint"><a href="https://www.openstreetmap.org/?mlat={{.Lat}}&amp;mlon={{.Lng}}#map=17/{{.Lat}}/{{.Lng}}">Open
-			in OpenStreetMap</a> for directions.</p>
-	{{end}}
+				<div class="actions">
+					{{if not .User}}
+					<a class="button button-block" href="/signup?next={{.Next}}">Sign up to join</a>
+					<p class="hint center">or <a href="/signin?next={{.Next}}">sign in</a> if you have an account</p>
+					{{else if eq .Group.Role "ADMIN"}}
+					<a class="button button-block" href="/groups/{{.Group.ID}}/edit">Edit group</a>
+					<p class="hint center">You run this group.</p>
+					{{else if .Group.Role}}
+					<p class="member-status">You're a member.</p>
+					<form method="post" action="/groups/{{.Group.ID}}/leave">
+						<button class="secondary button-block" type="submit">Leave group</button>
+					</form>
+					{{else if .CanJoin}}
+					<form method="post" action="/groups/{{.Group.ID}}/join">
+						<input type="hidden" name="invite" value="{{.Invite}}">
+						<button class="button-block" type="submit">Join group</button>
+					</form>
+					{{else}}
+					<p class="hint">Add one of this group's topics to your profile to join. Use the + next to a topic.</p>
+					{{end}}
+				</div>
+			</section>
+		</aside>
 
-	{{with .Group.Interests}}
-	<h3>Topics</h3>
-	<ul class="chips">
-		{{range .}}
-		<li>
-			{{.Name}}
-			{{if $.NeedTopic}}
-			<form class="inline" method="post" action="/interests/{{.ID}}/add">
-				<input type="hidden" name="next" value="/groups/{{$.Group.ID}}">
-				<button class="chip-button" type="submit" aria-label="Add {{.Name}} to your interests">+</button>
-			</form>
+		<div class="group-main">
+			<section class="panel" aria-labelledby="about-heading">
+				<h2 id="about-heading">About this group</h2>
+				{{with .Group.LongDescription}}
+				<p class="prose">{{.}}</p>
+				{{else}}
+				<p class="hint">The organizer hasn't added more details yet.</p>
+				{{end}}
+
+				{{with .Group.Interests}}
+				<h3 class="topics-heading">Topics</h3>
+				<ul class="chips">
+					{{range .}}
+					<li>
+						{{.Name}}
+						{{if $.NeedTopic}}
+						<form class="inline" method="post" action="/interests/{{.ID}}/add">
+							<input type="hidden" name="next" value="/groups/{{$.Group.ID}}">
+							<button class="chip-button" type="submit" aria-label="Add {{.Name}} to your interests">+</button>
+						</form>
+						{{end}}
+					</li>
+					{{end}}
+				</ul>
+				{{end}}
+			</section>
+
+			{{with .Group.Pin}}
+			<section class="panel" aria-labelledby="where-heading">
+				<h2 id="where-heading">Where we meet</h2>
+				<div class="map-section" hidden>
+					<div id="group-map" class="map map-group" data-lat="{{.Lat}}" data-lng="{{.Lng}}" role="region"
+						aria-label="Map of where the group meets"></div>
+				</div>
+				<p class="hint"><a href="https://www.openstreetmap.org/?mlat={{.Lat}}&amp;mlon={{.Lng}}#map=17/{{.Lat}}/{{.Lng}}">Open
+						in OpenStreetMap</a> for directions.</p>
+			</section>
 			{{end}}
-		</li>
-		{{end}}
-	</ul>
-	{{end}}
 
-	<div class="group-actions">
-		{{if not .User}}
-		<a class="button" href="/signup?next={{.Next}}">Sign up to join</a>
-		<span>or <a href="/signin?next={{.Next}}">sign in</a></span>
-		{{else if eq .Group.Role "ADMIN"}}
-		<a class="button" href="/groups/{{.Group.ID}}/edit">Edit group</a>
-		<span class="hint">You run this group.</span>
-		{{else if .Group.Role}}
-		<form class="inline" method="post" action="/groups/{{.Group.ID}}/leave">
-			<button class="secondary" type="submit">Leave group</button>
-		</form>
-		<span class="hint">You're a member.</span>
-		{{else if .CanJoin}}
-		<form class="inline" method="post" action="/groups/{{.Group.ID}}/join">
-			<input type="hidden" name="invite" value="{{.Invite}}">
-			<button type="submit">Join group</button>
-		</form>
-		{{else}}
-		<p class="hint">Add one of this group's topics to your profile to join. Use the + next to a topic.</p>
-		{{end}}
-	</div>
-</section>
-
-{{with .Members}}
-<section class="panel narrow" aria-labelledby="members-heading">
-	<h2 id="members-heading">Members</h2>
-	<ul class="members">
-		{{range .}}
-		<li>
-			<span>{{.Username}}{{if eq .Role "ADMIN"}} <span class="hint">(organizer)</span>{{end}}</span>
-			{{if and (eq $.Group.Role "ADMIN") (ne .Role "ADMIN")}}
-			<form class="inline" method="post" action="/groups/{{$.Group.ID}}/members/{{.ID}}/remove">
-				<button class="small secondary" type="submit" aria-label="Remove {{.Username}}">Remove</button>
-			</form>
+			{{with .Members}}
+			<section class="panel" aria-labelledby="members-heading">
+				<h2 id="members-heading">Members</h2>
+				<ul class="members">
+					{{range .}}
+					<li>
+						<span class="avatar" aria-hidden="true">{{slice .Username 0 1}}</span>
+						<span class="member-name">{{.Username}}</span>
+						{{if eq .Role "ADMIN"}}<span class="badge badge-ink">Organizer</span>{{end}}
+						{{if and (eq $.Group.Role "ADMIN") (ne .Role "ADMIN")}}
+						<form method="post" action="/groups/{{$.Group.ID}}/members/{{.ID}}/remove">
+							<button class="small secondary" type="submit" aria-label="Remove {{.Username}}">Remove</button>
+						</form>
+						{{end}}
+					</li>
+					{{end}}
+				</ul>
+			</section>
 			{{end}}
-		</li>
-		{{end}}
-	</ul>
-</section>
-{{end}}
 
-{{with .InviteLink}}
-<section class="panel narrow" aria-labelledby="invite-heading">
-	<h2 id="invite-heading">Invite link</h2>
-	<p>Anyone with this link can see and join the group.</p>
-	<label class="visually-hidden" for="invite-link">Invite link</label>
-	<input id="invite-link" class="wide" value="{{.}}" readonly>
-	<form class="group-actions" method="post" action="/groups/{{$.Group.ID}}/invite">
-		<button class="small secondary" type="submit">Make a new link</button>
-		<span class="hint">The old link stops working.</span>
-	</form>
-</section>
-{{end}}
+			{{with .InviteLink}}
+			<section class="panel" aria-labelledby="invite-heading">
+				<h2 id="invite-heading">Invite link</h2>
+				<p>Anyone with this link can see and join the group.</p>
+				<label class="visually-hidden" for="invite-link">Invite link</label>
+				<input id="invite-link" class="invite-link" value="{{.}}" readonly>
+				<form class="inline-actions" method="post" action="/groups/{{$.Group.ID}}/invite">
+					<button class="small secondary" type="submit">Make a new link</button>
+					<span class="hint">The old link stops working.</span>
+				</form>
+			</section>
+			{{end}}
+		</div>
+	</div>
+</div>
 {{end}}

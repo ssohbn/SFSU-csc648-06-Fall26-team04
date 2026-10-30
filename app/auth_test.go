@@ -23,7 +23,7 @@ func TestSignupSigninSignout(t *testing.T) {
 	if code != http.StatusSeeOther || loc != "/interests/?ok=welcome" {
 		t.Fatalf("signup: %d %q", code, loc)
 	}
-	if _, body, _ := c.get("/me"); !strings.Contains(body, "maeve@sfsu.edu") || !strings.Contains(body, "sign out") {
+	if _, body, _ := c.get("/me"); !strings.Contains(body, "maeve@sfsu.edu") || !strings.Contains(body, "Sign out") {
 		t.Fatalf("profile after signup: %s", body)
 	}
 

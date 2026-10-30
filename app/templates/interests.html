@@ -1,78 +1,59 @@
 {{define "content"}}
-<header>
-	<h1>Interests</h1>
-	<p class="subtitle">Study groups are tagged with interests. They are used for filtering and organizing study
-		groups by what they are studying.</p>
-</header>
+<div class="wrap wrap-narrow">
+	<header class="page-head">
+		<h1>Interests</h1>
+		<p class="lead">Study groups are tagged with interests. They are used for filtering and organizing study
+			groups by what they are studying.</p>
+	</header>
+	{{template "flash" .}}
 
-<section class="search-section" aria-labelledby="interest-search-heading">
-	<h2 id="interest-search-heading">Search interests</h2>
-
-	<form class="search-fields" action="/interests/" method="get" hx-get="/interests/"
+	<form class="interest-search" action="/interests/" method="get" hx-get="/interests/"
 		hx-trigger="input changed delay:300ms, submit" hx-target="#interest-results" hx-sync="this:replace"
 		hx-push-url="true">
-		<label class="visually-hidden" for="interest-query">Search interests</label>
-		<input id="interest-query" type="search" name="query" value="{{.Query}}" placeholder="Search interests..."
-			autocomplete="off">
-		<button type="submit">Search</button>
+		<div class="search-row">
+			<label class="visually-hidden" for="interest-query">Search interests</label>
+			<input id="interest-query" type="search" name="query" value="{{.Query}}" placeholder="Search interests"
+				autocomplete="off">
+			<button type="submit">Search</button>
+		</div>
 	</form>
 
 	{{if not .User}}
 	<p class="hint"><a href="/signin?next=/interests/">Sign in</a> to add interests to your profile.</p>
 	{{end}}
-</section>
 
-<section class="results-section" aria-labelledby="interest-results-heading">
-	<h2 id="interest-results-heading">All interests</h2>
-
-	<div class="table-container">
-		<table>
-			<thead>
-				<tr>
-					<th scope="col">Interest</th>
-					<th scope="col">People</th>
-					{{if .User}}<th scope="col"><span class="visually-hidden">Your profile</span></th>{{end}}
-				</tr>
-			</thead>
-			<tbody id="interest-results">
-				{{template "interest-rows" .}}
-			</tbody>
-		</table>
-	</div>
-</section>
+	<ul id="interest-results" class="interest-list" aria-label="Interests">
+		{{template "interest-rows" .}}
+	</ul>
+</div>
 {{end}}
 
 {{define "interest-rows"}}
-{{range .Interests}}
-<tr>
-	<td>{{.Name}}</td>
-	<td>{{.People}}</td>
-	{{if $.User}}
-	<td class="actions">
-		<form class="inline" method="post" action="/interests/{{.ID}}/{{if .Mine}}remove{{else}}add{{end}}">
-			<input type="hidden" name="next" value="{{$.Back}}">
-			{{if .Mine}}
-			<button class="small secondary" type="submit">Remove</button>
-			{{else}}
-			<button class="small" type="submit">Add</button>
-			{{end}}
-		</form>
-	</td>
-	{{end}}
-</tr>
-{{else}}
-<tr>
-	<td colspan="3">No interests found.</td>
-</tr>
-{{end}}
 {{with .NewName}}
-<tr>
-	<td colspan="3">
-		<form class="inline" method="post" action="/interests/">
-			<input type="hidden" name="name" value="{{.}}">
-			<button class="small" type="submit">Create &ldquo;{{.}}&rdquo;</button>
-		</form>
-	</td>
-</tr>
+<li class="interest-new">
+	<span class="interest-name">{{.}}<span class="hint">Not on the list yet.</span></span>
+	<form class="inline" method="post" action="/interests/">
+		<input type="hidden" name="name" value="{{.}}">
+		<button class="small" type="submit">Create &ldquo;{{.}}&rdquo;</button>
+	</form>
+</li>
+{{end}}
+{{range .Interests}}
+<li>
+	<span class="interest-name">{{.Name}}</span>
+	<span class="interest-people">{{.People}} {{if eq .People 1}}person{{else}}people{{end}}</span>
+	{{if $.User}}
+	<form class="inline" method="post" action="/interests/{{.ID}}/{{if .Mine}}remove{{else}}add{{end}}">
+		<input type="hidden" name="next" value="{{$.Back}}">
+		{{if .Mine}}
+		<button class="small secondary" type="submit" aria-label="Remove {{.Name}} from your interests">Remove</button>
+		{{else}}
+		<button class="small" type="submit" aria-label="Add {{.Name}} to your interests">Add</button>
+		{{end}}
+	</form>
+	{{end}}
+</li>
+{{else}}
+{{if not .NewName}}<li class="interest-empty">No interests found.</li>{{end}}
 {{end}}
 {{end}}

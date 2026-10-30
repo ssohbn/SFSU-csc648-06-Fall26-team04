@@ -1,24 +1,27 @@
 {{define "content"}}
-<header>
-	<h1>Sign In</h1>
-	<p class="subtitle">Welcome back. Sign in to join groups and manage your own.</p>
-</header>
+<div class="wrap wrap-auth">
+	<section class="panel auth-card" aria-labelledby="signin-heading">
+		<h1 id="signin-heading">Sign in</h1>
+		<p class="lead">Welcome back. Sign in to join groups and manage your own.</p>
+		{{template "flash" .}}
 
-<section class="panel narrow" aria-labelledby="signin-heading">
-	<h2 id="signin-heading">Your account</h2>
+		<form class="form" method="post" action="/signin">
+			<input type="hidden" name="next" value="{{.Next}}">
 
-	<form class="form" method="post" action="/signin">
-		<input type="hidden" name="next" value="{{.Next}}">
+			<div class="field">
+				<label for="login">Username or email</label>
+				<input id="login" name="login" value="{{.Login}}" required autocomplete="username">
+			</div>
 
-		<label for="login">Username or email</label>
-		<input id="login" name="login" value="{{.Login}}" required autocomplete="username">
+			<div class="field">
+				<label for="password">Password</label>
+				<input id="password" type="password" name="password" required autocomplete="current-password">
+			</div>
 
-		<label for="password">Password</label>
-		<input id="password" type="password" name="password" required autocomplete="current-password">
+			<button class="button-block" type="submit">Sign in</button>
+		</form>
 
-		<button type="submit">Sign in</button>
-	</form>
-
-	<p>New here? <a href="/signup{{with .Next}}?next={{.}}{{end}}">Create a free account</a></p>
-</section>
+		<p class="auth-switch">New here? <a href="/signup{{with .Next}}?next={{.}}{{end}}">Create a free account</a></p>
+	</section>
+</div>
 {{end}}
