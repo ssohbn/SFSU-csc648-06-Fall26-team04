@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"strings"
@@ -19,6 +20,25 @@ type StudyGroup struct {
 	Name             string
 	ShortDescription string
 	LongDescription  string
+	Mode             string
+	SchoolDomain     string
+	MeetingPlace     string
+	MeetingTime      string
+	Members          int
+	Interests        []Interest
+	Role             string // the viewer's: "", "USER" or "ADMIN"
+	inviteCode       string // unexported so no template can print it by accident
+}
+
+func (g StudyGroup) ModeLabel() string {
+	c, _ := modeInfo(g.Mode)
+	return c.Label
+}
+
+type Member struct {
+	ID       int64
+	Username string
+	Role     string
 }
 
 type Interest struct {
@@ -53,27 +73,6 @@ func takenErr(err error) error {
 		}
 	}
 	return err
-}
-
-func (s *store) searchGroups(ctx context.Context, query string) ([]StudyGroup, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT Id, Name, ShortDescription, LongDescription FROM StudyGroups
-		WHERE instr(lower(Name), lower(?1)) > 0 OR instr(lower(ShortDescription), lower(?1)) > 0 OR instr(lower(LongDescription), lower(?1)) > 0
-		ORDER BY Name`, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var groups []StudyGroup
-	for rows.Next() {
-		var g StudyGroup
-		if err := rows.Scan(&g.ID, &g.Name, &g.ShortDescription, &g.LongDescription); err != nil {
-			return nil, err
-		}
-		groups = append(groups, g)
-	}
-	return groups, rows.Err()
 }
 
 // searchInterests also counts people per interest and marks the ones userID
@@ -193,5 +192,166 @@ func (s *store) userBySession(ctx context.Context, tokenHash []byte, now time.Ti
 
 func (s *store) deleteSession(ctx context.Context, tokenHash []byte) error {
 	_, err := s.db.ExecContext(ctx, `DELETE FROM Sessions WHERE TokenHash = ?`, tokenHash)
+	return err
+}
+
+// groups loads every group, or only group id when id isn't 0, with its member
+// count, topics and viewerID's role. Callers decide what to show with canView.
+func (s *store) groups(ctx context.Context, viewerID, id int64) ([]StudyGroup, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT g.Id, g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain,
+			COALESCE(g.InviteCode, ''), g.MeetingPlace, g.MeetingTime,
+			(SELECT COUNT(*) FROM StudyGroupEnrollment e WHERE e.StudyGroupID = g.Id),
+			COALESCE((SELECT e.MemberType FROM StudyGroupEnrollment e WHERE e.StudyGroupID = g.Id AND e.UserID = ?1), '')
+		FROM StudyGroups g WHERE ?2 = 0 OR g.Id = ?2
+		ORDER BY g.Name COLLATE NOCASE`, viewerID, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []StudyGroup
+	index := map[int64]int{}
+	for rows.Next() {
+		var g StudyGroup
+		if err := rows.Scan(&g.ID, &g.Name, &g.ShortDescription, &g.LongDescription, &g.Mode, &g.SchoolDomain,
+			&g.inviteCode, &g.MeetingPlace, &g.MeetingTime, &g.Members, &g.Role); err != nil {
+			return nil, err
+		}
+		index[g.ID] = len(groups)
+		groups = append(groups, g)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	topics, err := s.db.QueryContext(ctx, `
+		SELECT gi.StudyGroupID, i.Id, i.Name FROM StudyGroupInterests gi JOIN Interests i ON i.Id = gi.InterestID
+		WHERE ?1 = 0 OR gi.StudyGroupID = ?1 ORDER BY i.Name`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer topics.Close()
+	for topics.Next() {
+		var groupID int64
+		var i Interest
+		if err := topics.Scan(&groupID, &i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		if n, ok := index[groupID]; ok {
+			groups[n].Interests = append(groups[n].Interests, i)
+		}
+	}
+	return groups, topics.Err()
+}
+
+// createGroup saves a new group with ownerID as its admin.
+func (s *store) createGroup(ctx context.Context, ownerID int64, g StudyGroup, topics []string) (int64, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `
+		INSERT INTO StudyGroups (Name, ShortDescription, LongDescription, Mode, SchoolDomain, InviteCode, MeetingPlace, MeetingTime)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain, rand.Text(), g.MeetingPlace, g.MeetingTime)
+	if err != nil {
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO StudyGroupEnrollment (UserID, StudyGroupID, MemberType) VALUES (?, ?, 'ADMIN')`, ownerID, id); err != nil {
+		return 0, err
+	}
+	if err := setTopics(ctx, tx, id, topics); err != nil {
+		return 0, err
+	}
+	return id, tx.Commit()
+}
+
+func (s *store) updateGroup(ctx context.Context, g StudyGroup, topics []string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// groups added straight to the database have no invite code yet
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE StudyGroups SET Name = ?, ShortDescription = ?, LongDescription = ?, Mode = ?, SchoolDomain = ?,
+			MeetingPlace = ?, MeetingTime = ?, InviteCode = COALESCE(InviteCode, ?)
+		WHERE Id = ?`,
+		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain, g.MeetingPlace, g.MeetingTime, rand.Text(), g.ID); err != nil {
+		return err
+	}
+	if err := setTopics(ctx, tx, g.ID, topics); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// setTopics replaces a group's topics, creating interests nobody has used yet.
+func setTopics(ctx context.Context, tx *sql.Tx, groupID int64, topics []string) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM StudyGroupInterests WHERE StudyGroupID = ?`, groupID); err != nil {
+		return err
+	}
+	for _, name := range topics {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO Interests (Name) VALUES (?) ON CONFLICT DO NOTHING`, name); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT OR IGNORE INTO StudyGroupInterests (StudyGroupID, InterestID)
+			SELECT ?, Id FROM Interests WHERE Name = ?`, groupID, name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// deleteGroup also drops its memberships and topics, through ON DELETE CASCADE.
+func (s *store) deleteGroup(ctx context.Context, id int64) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM StudyGroups WHERE Id = ?`, id)
+	return err
+}
+
+func (s *store) joinGroup(ctx context.Context, userID, groupID int64) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO StudyGroupEnrollment (UserID, StudyGroupID) VALUES (?, ?)`, userID, groupID)
+	return err
+}
+
+// removeMember never removes the admin, so a group always keeps its owner.
+func (s *store) removeMember(ctx context.Context, userID, groupID int64) error {
+	_, err := s.db.ExecContext(ctx,
+		`DELETE FROM StudyGroupEnrollment WHERE UserID = ? AND StudyGroupID = ? AND MemberType = 'USER'`, userID, groupID)
+	return err
+}
+
+func (s *store) members(ctx context.Context, groupID int64) ([]Member, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT u.Id, u.Username, e.MemberType FROM StudyGroupEnrollment e JOIN Users u ON u.Id = e.UserID
+		WHERE e.StudyGroupID = ? ORDER BY e.MemberType = 'ADMIN' DESC, u.Username`, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []Member
+	for rows.Next() {
+		var m Member
+		if err := rows.Scan(&m.ID, &m.Username, &m.Role); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+// resetInvite swaps in a new invite code, so old links stop working.
+func (s *store) resetInvite(ctx context.Context, groupID int64) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE StudyGroups SET InviteCode = ? WHERE Id = ?`, rand.Text(), groupID)
 	return err
 }

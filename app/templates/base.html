@@ -43,6 +43,7 @@
 			<li><a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>search groups</a></li>
 			<li><a href="/interests/" {{if eq .Path "/interests/"}}aria-current="page"{{end}}>interests</a></li>
 			{{with .User}}
+			<li><a href="/me/groups" {{if eq $.Path "/me/groups"}}aria-current="page"{{end}}>my groups</a></li>
 			<li><a href="/me" {{if eq $.Path "/me"}}aria-current="page"{{end}}>{{.Username}}</a></li>
 			<li>
 				<form class="inline" method="post" action="/signout">

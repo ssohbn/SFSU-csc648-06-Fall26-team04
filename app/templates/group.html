@@ -1,0 +1,96 @@
+{{define "content"}}
+<header>
+	<h1>{{.Group.Name}}</h1>
+	<p class="subtitle">{{.Group.ShortDescription}}</p>
+</header>
+
+<section class="panel narrow" aria-labelledby="about-heading">
+	<h2 id="about-heading">About this group</h2>
+	{{with .Group.LongDescription}}<p class="prose">{{.}}</p>{{end}}
+
+	<dl class="facts">
+		<dt>Who can join</dt>
+		<dd>{{.Mode.Label}}{{with .Group.SchoolDomain}} ({{.}}){{end}}<br><span class="hint">{{.Mode.Help}}</span></dd>
+		{{with .Group.MeetingPlace}}
+		<dt>Where</dt>
+		<dd>{{.}}</dd>
+		{{end}}
+		{{with .Group.MeetingTime}}
+		<dt>When</dt>
+		<dd>{{.}}</dd>
+		{{end}}
+		<dt>Members</dt>
+		<dd>{{.Group.Members}}</dd>
+	</dl>
+
+	{{with .Group.Interests}}
+	<h3>Topics</h3>
+	<ul class="chips">
+		{{range .}}
+		<li>
+			{{.Name}}
+			{{if $.NeedTopic}}
+			<form class="inline" method="post" action="/interests/{{.ID}}/add">
+				<input type="hidden" name="next" value="/groups/{{$.Group.ID}}">
+				<button class="chip-button" type="submit" aria-label="Add {{.Name}} to your interests">+</button>
+			</form>
+			{{end}}
+		</li>
+		{{end}}
+	</ul>
+	{{end}}
+
+	<div class="group-actions">
+		{{if not .User}}
+		<a class="button" href="/signup?next={{.Next}}">Sign up to join</a>
+		<span>or <a href="/signin?next={{.Next}}">sign in</a></span>
+		{{else if eq .Group.Role "ADMIN"}}
+		<a class="button" href="/groups/{{.Group.ID}}/edit">Edit group</a>
+		<span class="hint">You run this group.</span>
+		{{else if .Group.Role}}
+		<form class="inline" method="post" action="/groups/{{.Group.ID}}/leave">
+			<button class="secondary" type="submit">Leave group</button>
+		</form>
+		<span class="hint">You're a member.</span>
+		{{else if .CanJoin}}
+		<form class="inline" method="post" action="/groups/{{.Group.ID}}/join">
+			<input type="hidden" name="invite" value="{{.Invite}}">
+			<button type="submit">Join group</button>
+		</form>
+		{{else}}
+		<p class="hint">Add one of this group's topics to your profile to join. Use the + next to a topic.</p>
+		{{end}}
+	</div>
+</section>
+
+{{with .Members}}
+<section class="panel narrow" aria-labelledby="members-heading">
+	<h2 id="members-heading">Members</h2>
+	<ul class="members">
+		{{range .}}
+		<li>
+			<span>{{.Username}}{{if eq .Role "ADMIN"}} <span class="hint">(organizer)</span>{{end}}</span>
+			{{if and (eq $.Group.Role "ADMIN") (ne .Role "ADMIN")}}
+			<form class="inline" method="post" action="/groups/{{$.Group.ID}}/members/{{.ID}}/remove">
+				<button class="small secondary" type="submit" aria-label="Remove {{.Username}}">Remove</button>
+			</form>
+			{{end}}
+		</li>
+		{{end}}
+	</ul>
+</section>
+{{end}}
+
+{{with .InviteLink}}
+<section class="panel narrow" aria-labelledby="invite-heading">
+	<h2 id="invite-heading">Invite link</h2>
+	<p>Anyone with this link can see and join the group.</p>
+	<label class="visually-hidden" for="invite-link">Invite link</label>
+	<input id="invite-link" class="wide" value="{{.}}" readonly>
+	<form class="group-actions" method="post" action="/groups/{{$.Group.ID}}/invite">
+		<button class="small secondary" type="submit">Make a new link</button>
+		<span class="hint">The old link stops working.</span>
+	</form>
+</section>
+{{end}}
+{{end}}

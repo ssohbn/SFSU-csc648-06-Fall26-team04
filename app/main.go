@@ -2,6 +2,8 @@ package main
 
 import (
 	"cmp"
+	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +11,8 @@ import (
 )
 
 func main() {
+	seedDemo := flag.Bool("seed", false, "add demo accounts and groups if the database has no accounts yet")
+	flag.Parse()
 	dbPath := cmp.Or(os.Getenv("DB_PATH"), "studysync.sqlite3")
 	port := cmp.Or(os.Getenv("PORT"), "6767")
 
@@ -21,6 +25,11 @@ func main() {
 	app, err := newApp(db)
 	if err != nil {
 		log.Fatalf("load templates: %v", err)
+	}
+	if *seedDemo {
+		if err := seed(context.Background(), app.store); err != nil {
+			log.Fatalf("seed: %v", err)
+		}
 	}
 
 	srv := &http.Server{

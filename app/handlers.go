@@ -76,6 +76,17 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /signout", a.signout)
 	mux.HandleFunc("GET /me", a.profile)
 	mux.HandleFunc("POST /me", a.profile)
+	mux.HandleFunc("GET /me/groups", a.myGroups)
+	mux.HandleFunc("GET /groups/new", a.newGroup)
+	mux.HandleFunc("POST /groups/new", a.newGroup)
+	mux.HandleFunc("GET /groups/{id}", a.group)
+	mux.HandleFunc("GET /groups/{id}/edit", a.editGroup)
+	mux.HandleFunc("POST /groups/{id}/edit", a.editGroup)
+	mux.HandleFunc("POST /groups/{id}/delete", a.deleteGroup)
+	mux.HandleFunc("POST /groups/{id}/join", a.joinGroup)
+	mux.HandleFunc("POST /groups/{id}/leave", a.leaveGroup)
+	mux.HandleFunc("POST /groups/{id}/invite", a.resetInvite)
+	mux.HandleFunc("POST /groups/{id}/members/{user}/remove", a.removeMember)
 	mux.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
@@ -98,10 +109,17 @@ type view struct {
 // notices are picked by ?ok= from a fixed list, so a link can't put its own
 // text on the page.
 var notices = map[string]string{
-	"welcome":   "Your account is ready. Add a few interests so groups can find you.",
-	"signedout": "You're signed out.",
-	"saved":     "Profile saved.",
-	"interest":  "Added to your interests.",
+	"welcome":    "Your account is ready. Add a few interests so groups can find you.",
+	"signedout":  "You're signed out.",
+	"saved":      "Profile saved.",
+	"interest":   "Added to your interests.",
+	"created":    "Your group is ready. Share the page so people can join.",
+	"groupsaved": "Group saved.",
+	"joined":     "You joined the group.",
+	"left":       "You left the group.",
+	"removed":    "Member removed.",
+	"deleted":    "Group deleted.",
+	"invite":     "New invite link made. The old one no longer works.",
 }
 
 func newView(r *http.Request, title string) view {
@@ -141,29 +159,6 @@ func (a *app) notFound(w http.ResponseWriter, r *http.Request) {
 func (a *app) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	log.Printf("%s %s: %v", r.Method, r.URL.Path, err)
 	a.errorPage(w, r, http.StatusInternalServerError, "Something went wrong", "Please try again in a moment.")
-}
-
-func (a *app) home(w http.ResponseWriter, r *http.Request) {
-	query := r.FormValue("query")
-	groups, err := a.store.searchGroups(r.Context(), query)
-	if err != nil {
-		a.serverError(w, r, err)
-		return
-	}
-
-	type homeView struct {
-		view
-		Query  string
-		Groups []StudyGroup
-	}
-
-	// send only the rows when htmx asks, and never cache one as the other
-	name := "base"
-	if isHTMXRequest(r) {
-		name = "rows"
-	}
-	w.Header().Add("Vary", "HX-Request")
-	a.render(w, http.StatusOK, "home.html", name, homeView{view: newView(r, ""), Query: query, Groups: groups})
 }
 
 func (a *app) about(w http.ResponseWriter, r *http.Request) {
@@ -268,9 +263,10 @@ func (a *app) profile(w http.ResponseWriter, r *http.Request) {
 	type profileView struct {
 		view
 		Email, Bio string
+		School     string
 		Interests  []Interest
 	}
-	v := profileView{view: newView(r, "Your profile"), Email: user.Email, Bio: user.Bio}
+	v := profileView{view: newView(r, "Your profile"), Email: user.Email, Bio: user.Bio, School: schoolDomain(user.Email)}
 	status := http.StatusOK
 
 	if r.Method == http.MethodPost {

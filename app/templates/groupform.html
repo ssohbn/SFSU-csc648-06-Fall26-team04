@@ -1,0 +1,63 @@
+{{define "content"}}
+<header>
+	<h1>{{if .Group.ID}}Edit Study Group{{else}}Start a Study Group{{end}}</h1>
+	<p class="subtitle">Say what you study, where you meet and who can join.</p>
+</header>
+
+<section class="panel narrow" aria-labelledby="group-form-heading">
+	<h2 id="group-form-heading">{{if .Group.ID}}{{.Group.Name}}{{else}}Your group{{end}}</h2>
+
+	<form class="form" method="post" action="{{if .Group.ID}}/groups/{{.Group.ID}}/edit{{else}}/groups/new{{end}}">
+		<label for="name">Name</label>
+		<input id="name" name="name" value="{{.Group.Name}}" required minlength="3" maxlength="80">
+
+		<label for="short">Short description</label>
+		<input id="short" name="short" value="{{.Group.ShortDescription}}" required maxlength="140">
+		<p class="hint">Shown in search results.</p>
+
+		<label for="long">Long description</label>
+		<textarea id="long" name="long" rows="5" maxlength="2000">{{.Group.LongDescription}}</textarea>
+
+		<label for="place">Where you meet</label>
+		<input id="place" name="place" value="{{.Group.MeetingPlace}}" maxlength="120"
+			placeholder="J. Paul Leonard Library, 2nd floor">
+
+		<label for="time">When you meet</label>
+		<input id="time" name="time" value="{{.Group.MeetingTime}}" maxlength="80" placeholder="Fridays, 1 pm">
+
+		<label for="topics">Topics</label>
+		<input id="topics" name="topics" value="{{.Topics}}" maxlength="400" placeholder="calculus, finals">
+		<p class="hint">Separate topics with commas. People search and filter groups by topic.</p>
+
+		<fieldset class="choices">
+			<legend>Who can join</legend>
+			{{range .Modes}}
+			<label>
+				<input type="radio" name="mode" value="{{.Value}}" required {{if eq .Value $.Group.Mode}}checked{{end}}>
+				<span>
+					<strong>{{.Label}}</strong>{{if eq .Value "SCHOOL"}}{{with $.School}} ({{.}}){{end}}{{end}}<br>
+					<span class="hint">{{.Help}}{{if and (eq .Value "SCHOOL") (not $.School)}} Needs a .edu email on
+						your profile.{{end}}</span>
+				</span>
+			</label>
+			{{end}}
+		</fieldset>
+
+		<button type="submit">{{if .Group.ID}}Save group{{else}}Create group{{end}}</button>
+	</form>
+</section>
+
+{{if .Group.ID}}
+<section class="panel narrow" aria-labelledby="delete-heading">
+	<h2 id="delete-heading">Delete group</h2>
+
+	<form class="form" method="post" action="/groups/{{.Group.ID}}/delete">
+		<label class="check">
+			<input type="checkbox" name="confirm" value="yes" required>
+			<span>Delete &ldquo;{{.Group.Name}}&rdquo; and remove all its members. This can't be undone.</span>
+		</label>
+		<button class="secondary" type="submit">Delete group</button>
+	</form>
+</section>
+{{end}}
+{{end}}

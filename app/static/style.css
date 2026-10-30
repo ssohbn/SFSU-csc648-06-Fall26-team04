@@ -248,6 +248,8 @@ input[type="radio"] {
     top: 100%;
     left: 0;
     width: 100%;
+    max-height: 320px;
+    overflow-y: auto;
     background-color: var(--surface);
     border: 1px solid var(--line);
     padding: 5px 0;
@@ -268,6 +270,11 @@ input[type="radio"] {
 /* Additional filter checkboxes */
 .filter-options {
     margin-top: 20px;
+}
+
+.search-fields .filter-options {
+    flex-basis: 100%;
+    margin-top: 0;
 }
 
 .filter-options label {
@@ -440,9 +447,9 @@ button.small,
     padding: 4px 4px 4px 12px;
 }
 
-.chip-remove,
-.chip-remove:hover,
-.chip-remove:active {
+.chip-button,
+.chip-button:hover,
+.chip-button:active {
     background: none;
     border: 0;
     box-shadow: none;
@@ -453,8 +460,98 @@ button.small,
     color: var(--muted);
 }
 
-.chip-remove:hover {
+.chip-button:hover {
     color: var(--ink);
+}
+
+/* Group pages */
+.badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 8px;
+    background-color: var(--field);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.prose {
+    white-space: pre-line;
+}
+
+.facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 8px 20px;
+    margin: 0 0 20px;
+}
+
+.facts dt {
+    font-weight: bold;
+}
+
+.facts dd {
+    margin: 0;
+}
+
+.group-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+}
+
+.members {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.members li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #c9bdac;
+}
+
+.members li:last-child {
+    border-bottom: 0;
+}
+
+input.wide {
+    width: 100%;
+    margin-bottom: 14px;
+}
+
+.form .choices {
+    display: grid;
+    gap: 12px;
+    margin: 16px 0 0;
+    padding: 12px 16px 16px;
+    border: 1px solid var(--line);
+}
+
+.form .choices legend {
+    font-weight: bold;
+    padding: 0 6px;
+}
+
+.form .choices label,
+.form .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    font-weight: normal;
+}
+
+.form .choices input,
+.form .check input {
+    margin-top: 4px;
 }
 
 td.actions {
@@ -498,5 +595,14 @@ td.actions {
     th,
     td {
         padding: 10px;
+    }
+
+    .facts {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+
+    .facts dd {
+        margin-bottom: 8px;
     }
 }
