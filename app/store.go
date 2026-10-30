@@ -24,10 +24,24 @@ type StudyGroup struct {
 	SchoolDomain     string
 	MeetingPlace     string
 	MeetingTime      string
+	Pin              *Pin // nil until the organizer drops one on the map
 	Members          int
 	Interests        []Interest
 	Role             string // the viewer's: "", "USER" or "ADMIN"
 	inviteCode       string // unexported so no template can print it by accident
+}
+
+// Pin is where a group meets on the map.
+type Pin struct {
+	Lat, Lng float64
+}
+
+// columns is the pin as the database stores it, NULLs when there's no pin.
+func (p *Pin) columns() (lat, lng any) {
+	if p == nil {
+		return nil, nil
+	}
+	return p.Lat, p.Lng
 }
 
 func (g StudyGroup) ModeLabel() string {
@@ -200,7 +214,7 @@ func (s *store) deleteSession(ctx context.Context, tokenHash []byte) error {
 func (s *store) groups(ctx context.Context, viewerID, id int64) ([]StudyGroup, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT g.Id, g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain,
-			COALESCE(g.InviteCode, ''), g.MeetingPlace, g.MeetingTime,
+			COALESCE(g.InviteCode, ''), g.MeetingPlace, g.MeetingTime, g.Latitude, g.Longitude,
 			(SELECT COUNT(*) FROM StudyGroupEnrollment e WHERE e.StudyGroupID = g.Id),
 			COALESCE((SELECT e.MemberType FROM StudyGroupEnrollment e WHERE e.StudyGroupID = g.Id AND e.UserID = ?1), '')
 		FROM StudyGroups g WHERE ?2 = 0 OR g.Id = ?2
@@ -214,9 +228,13 @@ func (s *store) groups(ctx context.Context, viewerID, id int64) ([]StudyGroup, e
 	index := map[int64]int{}
 	for rows.Next() {
 		var g StudyGroup
+		var lat, lng sql.NullFloat64
 		if err := rows.Scan(&g.ID, &g.Name, &g.ShortDescription, &g.LongDescription, &g.Mode, &g.SchoolDomain,
-			&g.inviteCode, &g.MeetingPlace, &g.MeetingTime, &g.Members, &g.Role); err != nil {
+			&g.inviteCode, &g.MeetingPlace, &g.MeetingTime, &lat, &lng, &g.Members, &g.Role); err != nil {
 			return nil, err
+		}
+		if lat.Valid && lng.Valid {
+			g.Pin = &Pin{lat.Float64, lng.Float64}
 		}
 		index[g.ID] = len(groups)
 		groups = append(groups, g)
@@ -252,10 +270,13 @@ func (s *store) createGroup(ctx context.Context, ownerID int64, g StudyGroup, to
 		return 0, err
 	}
 	defer tx.Rollback()
+	lat, lng := g.Pin.columns()
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO StudyGroups (Name, ShortDescription, LongDescription, Mode, SchoolDomain, InviteCode, MeetingPlace, MeetingTime)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain, rand.Text(), g.MeetingPlace, g.MeetingTime)
+		INSERT INTO StudyGroups (Name, ShortDescription, LongDescription, Mode, SchoolDomain, InviteCode,
+			MeetingPlace, MeetingTime, Latitude, Longitude)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain, rand.Text(),
+		g.MeetingPlace, g.MeetingTime, lat, lng)
 	if err != nil {
 		return 0, err
 	}
@@ -279,12 +300,14 @@ func (s *store) updateGroup(ctx context.Context, g StudyGroup, topics []string) 
 		return err
 	}
 	defer tx.Rollback()
+	lat, lng := g.Pin.columns()
 	// groups added straight to the database have no invite code yet
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE StudyGroups SET Name = ?, ShortDescription = ?, LongDescription = ?, Mode = ?, SchoolDomain = ?,
-			MeetingPlace = ?, MeetingTime = ?, InviteCode = COALESCE(InviteCode, ?)
+			MeetingPlace = ?, MeetingTime = ?, Latitude = ?, Longitude = ?, InviteCode = COALESCE(InviteCode, ?)
 		WHERE Id = ?`,
-		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain, g.MeetingPlace, g.MeetingTime, rand.Text(), g.ID); err != nil {
+		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain,
+		g.MeetingPlace, g.MeetingTime, lat, lng, rand.Text(), g.ID); err != nil {
 		return err
 	}
 	if err := setTopics(ctx, tx, g.ID, topics); err != nil {

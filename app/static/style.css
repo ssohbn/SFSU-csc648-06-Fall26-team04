@@ -571,6 +571,63 @@ td.actions {
     border: 0;
 }
 
+/* hidden has to win over display rules like the one on buttons */
+[hidden] {
+    display: none !important;
+}
+
+/* Maps, see static/js/map.js */
+.map {
+    height: 440px;
+    border: 1px solid var(--line);
+    background-color: var(--field);
+}
+
+.map.small {
+    height: 280px;
+    margin-top: 16px;
+}
+
+.map-section .hint,
+.map-section + .hint {
+    margin-top: 10px;
+}
+
+.pin-picker .group-actions {
+    margin-top: 8px;
+}
+
+.pin-picker .group-actions button {
+    margin-top: 0;
+}
+
+/* the site's button look stays off the map's own buttons */
+.maplibregl-map button {
+    box-shadow: none;
+    transform: none;
+    transition: none;
+}
+
+.maplibregl-popup-content {
+    font: 14px/1.4 Arial, sans-serif;
+    color: var(--ink);
+    padding: 12px 34px 12px 14px;
+}
+
+.maplibregl-popup-close-button {
+    padding: 4px 10px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.maplibregl-popup-content a {
+    font-weight: bold;
+}
+
+.maplibregl-popup-content p {
+    margin: 4px 0 0;
+}
+
 @media (max-width: 640px) {
     body {
         padding: 16px;
@@ -604,5 +661,13 @@ td.actions {
 
     .facts dd {
         margin-bottom: 8px;
+    }
+
+    .map {
+        height: 320px;
+    }
+
+    .map.small {
+        height: 240px;
     }
 }

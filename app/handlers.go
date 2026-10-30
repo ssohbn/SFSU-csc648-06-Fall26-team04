@@ -90,7 +90,13 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
+	staticFiles := http.StripPrefix("/static/", http.FileServerFS(static))
+	mux.Handle("GET /static/", staticFiles)
+	mux.HandleFunc("GET /static/vendor/", func(w http.ResponseWriter, r *http.Request) {
+		// vendored files have their version in the path, so browsers can keep them
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		staticFiles.ServeHTTP(w, r)
+	})
 	mux.HandleFunc("/", a.notFound)
 
 	// browsers mark cross-site form posts, so this blocks csrf without tokens
@@ -104,6 +110,7 @@ type view struct {
 	User   *User
 	Notice string
 	Error  string
+	Map    bool // the page draws a map, so load maplibre
 }
 
 // notices are picked by ?ok= from a fixed list, so a link can't put its own

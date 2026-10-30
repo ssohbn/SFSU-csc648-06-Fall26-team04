@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/subtle"
+	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -58,6 +59,7 @@ func (a *app) home(w http.ResponseWriter, r *http.Request) {
 		Match:  user != nil && q.Get("match") == "1",
 		Mine:   user != nil && q.Get("mine") == "1",
 	}
+	v.Map = true
 	for _, id := range q["topic"] {
 		if n, err := strconv.ParseInt(id, 10, 64); err == nil {
 			v.Picked[n] = true
@@ -195,6 +197,7 @@ func (a *app) renderGroup(w http.ResponseWriter, r *http.Request, status int, g 
 	}
 	v := groupView{view: newView(r, g.Name), Group: g}
 	v.Error = problem
+	v.Map = g.Pin != nil
 	v.Mode, _ = modeInfo(g.Mode)
 	if acc.inviteOK {
 		v.Invite = invite
@@ -371,6 +374,7 @@ func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int
 	}
 	v := groupFormView{view: newView(r, title), Group: g, Topics: topics, Modes: modeChoices, School: schoolDomain(currentUser(r).Email)}
 	v.Error = problem
+	v.Map = true
 	a.render(w, status, "groupform.html", "base", v)
 }
 
@@ -396,6 +400,19 @@ func readGroupForm(r *http.Request, user *User, g StudyGroup) (StudyGroup, []str
 		g.SchoolDomain = schoolDomain(user.Email)
 	}
 
+	// the map fills these in, both or neither
+	g.Pin = nil
+	pinOK := true
+	if lat, lng := r.PostFormValue("lat"), r.PostFormValue("lng"); lat != "" || lng != "" {
+		la, errLat := strconv.ParseFloat(lat, 64)
+		ln, errLng := strconv.ParseFloat(lng, 64)
+		// the comparisons are false for NaN, so it's rejected too
+		pinOK = errLat == nil && errLng == nil && math.Abs(la) <= 90 && math.Abs(ln) <= 180
+		if pinOK {
+			g.Pin = &Pin{la, ln}
+		}
+	}
+
 	var topics []string
 	for _, t := range strings.Split(r.PostFormValue("topics"), ",") {
 		t = cleanName(t)
@@ -418,6 +435,8 @@ func readGroupForm(r *http.Request, user *User, g StudyGroup) (StudyGroup, []str
 		problem = "Keep the meeting place to 120 characters."
 	case n(g.MeetingTime) > 80:
 		problem = "Keep the meeting time to 80 characters."
+	case !pinOK:
+		problem = "Drop the pin on the map again."
 	case len(topics) > 8:
 		problem = "Use up to 8 topics."
 	case slices.ContainsFunc(topics, func(t string) bool { return !validInterestName(t) }):

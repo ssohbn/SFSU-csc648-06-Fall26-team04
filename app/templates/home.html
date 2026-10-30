@@ -46,6 +46,13 @@
 	{{end}}
 </section>
 
+<!-- map.js shows this once the map can draw, the list below works without it -->
+<section class="panel map-section" aria-labelledby="map-heading" hidden>
+	<h2 id="map-heading">Where they meet</h2>
+	<div id="groups-map" class="map" role="region" aria-label="Map of the study groups below"></div>
+	<p class="hint">Pins follow your search. Groups without a pin are only in the list.</p>
+</section>
+
 <!-- search results go here -->
 <section class="results-section" aria-labelledby="results-heading">
 	<h2 id="results-heading">Study groups</h2>
@@ -79,7 +86,7 @@
 {{end}}
 
 {{define "row"}}
-<tr>
+<tr{{with .Pin}} data-lat="{{.Lat}}" data-lng="{{.Lng}}"{{end}}>
 	<td>
 		<a href="/groups/{{.ID}}">{{.Name}}</a>
 		{{if ne .Mode "OPEN"}}<span class="badge">{{.ModeLabel}}</span>{{end}}
@@ -87,7 +94,7 @@
 		<br><span class="hint">{{.ShortDescription}}</span>
 	</td>
 	<td>{{range $i, $t := .Interests}}{{if $i}}, {{end}}{{$t.Name}}{{end}}</td>
-	<td>{{.MeetingPlace}}{{with .MeetingTime}}<br><span class="hint">{{.}}</span>{{end}}</td>
+	<td class="meets">{{.MeetingPlace}}{{with .MeetingTime}}{{if $.MeetingPlace}}<br>{{end}}<span class="hint">{{.}}</span>{{end}}</td>
 	<td>{{.Members}}</td>
 </tr>
 {{end}}

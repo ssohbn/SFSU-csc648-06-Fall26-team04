@@ -351,6 +351,89 @@ func TestHomeFilters(t *testing.T) {
 	}
 }
 
+func TestGroupPin(t *testing.T) {
+	srv, s := newTestServer(t)
+	gus := newClient(t, srv)
+	gus.signup("gus", "gus@gmail.com")
+
+	for _, pin := range [][2]string{{"37.7", ""}, {"", "-122.4"}, {"north", "-122.4"}, {"91", "0"}, {"0", "-180.5"}, {"NaN", "0"}, {"0", "Inf"}} {
+		code, body, _ := gus.post("/groups/new", url.Values{
+			"name": {"Calc"}, "short": {"integrals"}, "mode": {modeOpen}, "lat": {pin[0]}, "lng": {pin[1]},
+		})
+		if code != http.StatusUnprocessableEntity || !strings.Contains(body, "Drop the pin on the map again.") {
+			t.Errorf("pin %q: got %d", pin, code)
+		}
+	}
+
+	plain := gus.createGroup(url.Values{"name": {"No pin"}, "lat": {""}, "lng": {""}})
+	pinned := gus.createGroup(url.Values{"name": {"Pinned"}, "lat": {"37.7214011"}, "lng": {"-122.4780847"}})
+	_, body, _ := gus.get(pinned)
+	for _, want := range []string{
+		`data-lat="37.7214011" data-lng="-122.4780847"`,
+		`href="https://www.openstreetmap.org/?mlat=37.7214011&amp;mlon=-122.4780847#map=17/37.7214011/-122.4780847"`,
+		"maplibre-gl.js",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("pinned group page should have %s", want)
+		}
+	}
+	if _, body, _ = gus.get(plain); strings.Contains(body, "openstreetmap.org") || strings.Contains(body, "maplibre") {
+		t.Errorf("a group without a pin draws no map: %s", body)
+	}
+	if _, rows, _ := gus.do(htmxGet(t, srv.URL+"/")); strings.Count(rows, "data-lat=") != 1 || !strings.Contains(rows, `<tr data-lat="37.7214011" data-lng="-122.4780847">`) {
+		t.Errorf("only the pinned row should carry coordinates: %s", rows)
+	}
+
+	// the edit form sends the pin back as it is, so saving without touching the map keeps it
+	if _, body, _ = gus.get(pinned + "/edit"); !strings.Contains(body, `name="lat" value="37.7214011"`) || !strings.Contains(body, `name="lng" value="-122.4780847"`) {
+		t.Errorf("edit form should hold the pin: %s", body)
+	}
+	edit := url.Values{"name": {"Pinned"}, "short": {"we study"}, "mode": {modeOpen}, "lat": {"37.7214011"}, "lng": {"-122.4780847"}}
+	if code, _, _ := gus.post(pinned+"/edit", edit); code != http.StatusSeeOther {
+		t.Fatalf("edit: %d", code)
+	}
+	if _, body, _ = gus.get(pinned); !strings.Contains(body, `data-lat="37.7214011"`) {
+		t.Errorf("saving should keep the pin")
+	}
+	edit.Set("lat", "")
+	edit.Set("lng", "")
+	gus.post(pinned+"/edit", edit)
+	if _, body, _ = gus.get(pinned); strings.Contains(body, "openstreetmap.org") {
+		t.Errorf("removing the pin should clear it")
+	}
+
+	if _, err := s.db.Exec(`UPDATE StudyGroups SET Latitude = 91`); err == nil {
+		t.Errorf("the database should refuse a latitude past 90")
+	}
+}
+
+func TestMapAssets(t *testing.T) {
+	srv, _ := newTestServer(t)
+	gus := newClient(t, srv)
+	gus.signup("gus", "gus@gmail.com")
+	for path, want := range map[string]bool{"/": true, "/groups/new": true, "/about/": false, "/interests/": false, "/me": false} {
+		if _, body, _ := gus.get(path); strings.Contains(body, "/static/js/map.js") != want {
+			t.Errorf("%s: map assets loaded = %v", path, !want)
+		}
+	}
+
+	for path, want := range map[string]string{
+		"/static/vendor/maplibre-gl-5.23.0/maplibre-gl.js": "public, max-age=31536000, immutable",
+		// a miss must not stick in caches for a year
+		"/static/vendor/maplibre-gl-5.23.0/nope.js": "",
+		"/static/style.css":                         "",
+	} {
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if got := resp.Header.Get("Cache-Control"); got != want {
+			t.Errorf("%s: %d, Cache-Control %q, want %q", path, resp.StatusCode, got, want)
+		}
+	}
+}
+
 func htmxGet(t *testing.T, url string) *http.Request {
 	t.Helper()
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -381,8 +464,8 @@ func TestSeed(t *testing.T) {
 	modes := map[string]bool{}
 	for _, g := range all {
 		modes[g.Mode] = true
-		if g.Members < 1 || len(g.Interests) == 0 {
-			t.Errorf("%s: %d members, topics %v", g.Name, g.Members, g.Interests)
+		if g.Members < 1 || len(g.Interests) == 0 || g.Pin == nil {
+			t.Errorf("%s: %d members, topics %v, pin %v", g.Name, g.Members, g.Interests, g.Pin)
 		}
 	}
 	if len(modes) != len(modeChoices) {

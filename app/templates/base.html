@@ -14,9 +14,18 @@
 	<!-- our styling! -->
 	<link rel="stylesheet" href="/static/style.css">
 
-	<!-- prevents partials on cache miss -->
+	{{if .Map}}
+	<link rel="stylesheet" href="/static/vendor/maplibre-gl-5.23.0/maplibre-gl.css">
+	<script defer src="/static/vendor/maplibre-gl-5.23.0/maplibre-gl.js"></script>
+	<script defer src="/static/js/map.js"></script>
+	{{end}}
+
+	<!-- prevents partials on cache miss. no history cache: back reloads the page,
+		since a saved copy of the page can't bring a live map back -->
 	<meta name="htmx-config" content='{
-                "historyRestoreAsHxRequest": false
+                "historyRestoreAsHxRequest": false,
+                "historyCacheSize": 0,
+                "refreshOnHistoryMiss": true
             }'>
 </head>
 

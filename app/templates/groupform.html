@@ -22,6 +22,18 @@
 		<input id="place" name="place" value="{{.Group.MeetingPlace}}" maxlength="120"
 			placeholder="J. Paul Leonard Library, 2nd floor">
 
+		<!-- map.js shows the picker and fills in lat and lng -->
+		<input type="hidden" id="lat" name="lat" value="{{with .Group.Pin}}{{.Lat}}{{end}}">
+		<input type="hidden" id="lng" name="lng" value="{{with .Group.Pin}}{{.Lng}}{{end}}">
+		<div class="map-section pin-picker" hidden>
+			<div id="pin-map" class="map small" role="region" aria-label="Map for pinning where you meet"></div>
+			<p class="hint" id="pin-status" aria-live="polite"></p>
+			<div class="group-actions">
+				<button class="small secondary" type="button" id="pin-center">Pin the map center</button>
+				<button class="small secondary" type="button" id="pin-clear">Remove pin</button>
+			</div>
+		</div>
+
 		<label for="time">When you meet</label>
 		<input id="time" name="time" value="{{.Group.MeetingTime}}" maxlength="80" placeholder="Fridays, 1 pm">
 
