@@ -70,17 +70,20 @@ func TestGroupSearch(t *testing.T) {
 		('Calc II', 'integrals every week', ''),
 		('Databases', 'sql practice', 'we meet at 100% capacity')`)
 
-	code, body := get(t, srv.URL+"/studygroups/?query=CALC")
+	code, body := get(t, srv.URL+"/?query=CALC")
 	if code != http.StatusOK || !strings.Contains(body, "Calc II") || strings.Contains(body, "Databases") {
 		t.Fatalf("search by name: %d %s", code, body)
 	}
+	if !strings.Contains(body, `value="CALC"`) {
+		t.Fatalf("search box should keep the query: %s", body)
+	}
 
-	_, body = get(t, srv.URL+"/studygroups/?query=100%25")
+	_, body = get(t, srv.URL+"/?query=100%25")
 	if !strings.Contains(body, "Databases") || strings.Contains(body, "Calc II") {
 		t.Fatalf("percent sign should match literally: %s", body)
 	}
 
-	_, body = get(t, srv.URL+"/studygroups/?query=sql", "HX-Request", "true")
+	_, body = get(t, srv.URL+"/?query=sql", "HX-Request", "true")
 	if strings.Contains(body, "<html") || !strings.Contains(body, "Databases") {
 		t.Fatalf("htmx request should get only rows: %s", body)
 	}
@@ -107,7 +110,11 @@ func TestPagesAndStatic(t *testing.T) {
 			t.Errorf("%s: got %d", path, code)
 		}
 	}
-	if code, _ := get(t, srv.URL+"/nope"); code != http.StatusNotFound {
-		t.Errorf("unknown path: got %d", code)
+	code, body := get(t, srv.URL+"/nope")
+	if code != http.StatusNotFound || !strings.Contains(body, "Page not found") || !strings.Contains(body, "site-header") {
+		t.Errorf("unknown path should get the styled 404: %d %s", code, body)
+	}
+	if _, body := get(t, srv.URL+"/about/"); !strings.Contains(body, "<title>About us - StudySync</title>") {
+		t.Errorf("about title: %s", body)
 	}
 }

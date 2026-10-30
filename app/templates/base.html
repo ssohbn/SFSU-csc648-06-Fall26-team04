@@ -1,8 +1,13 @@
 {{define "base"}}
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{with .Title}}{{.}} - {{end}}StudySync</title>
+	<link rel="icon" href="data:,">
+
 	<!-- our site uses htmx to avoid writing js (its annoying and more fun to just do everything in go)-->
 	<script defer src="/static/js/htmx.min.js"></script>
 
@@ -13,37 +18,39 @@
 	<meta name="htmx-config" content='{
                 "historyRestoreAsHxRequest": false
             }'>
-
 </head>
-{{template "header" .}}
 
 <body>
-	{{template "content" .}}
-</body>
+	{{template "header" .}}
 
-{{template "footer" .}}
+	<main class="page">
+		{{template "content" .}}
+	</main>
+
+	{{template "footer" .}}
+</body>
 
 </html>
 {{end}}
 
 {{define "header"}}
-<header>
-	<nav>
+<header class="site-header">
+	<a class="brand" href="/">StudySync</a>
+	<nav aria-label="main">
 		<ul>
-			<li><a href="/">home</a></li>
-			<li><a href="/static/">static dir</a></li>
-			<li><a href="/studygroups/">studygroups</a></li>
+			<li><a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>search groups</a></li>
+			<li><a href="/interests/" {{if eq .Path "/interests/"}}aria-current="page"{{end}}>interests</a></li>
 		</ul>
 	</nav>
-
 </header>
 {{end}}
 
 {{define "footer"}}
-<footer>
+<footer class="site-footer">
 	<ul>
-		<li><a href="/about/">about</a></li>
-		<li><a target="_blank" href="https://github.com/ssohbn/SFSU-csc648-06-Fall26-team04">source</a></li>
+		<li><a href="/about/">about us</a></li>
+		<li><a href="https://github.com/ssohbn/SFSU-csc648-06-Fall26-team04">source</a></li>
 	</ul>
+	<p>CSC 648 team 04, Fall 2026</p>
 </footer>
 {{end}}

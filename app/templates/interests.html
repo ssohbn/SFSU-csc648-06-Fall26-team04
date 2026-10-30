@@ -1,33 +1,49 @@
 {{define "content"}}
-<h1>add/search interests</h1>
+<header>
+	<h1>Interests</h1>
+	<p class="subtitle">Study groups are tagged with interests. They are used for filtering and organizing study
+		groups by what they are studying.</p>
+</header>
 
-<input type="search"
-       name="query"
-       placeholder="interest"
-       hx-get="/interests/"
-       hx-trigger="input changed delay:300ms"
-       hx-target="#interest-results">
+<section class="search-section" aria-labelledby="interest-search-heading">
+	<h2 id="interest-search-heading">Search interests</h2>
 
-<table>
-    <thead>
-        <tr>
-            <th>interest</th>
-        </tr>
-    </thead>
-    <tbody id="interest-results">
-        {{template "interest-rows" .}}
-    </tbody>
-</table>
+	<form class="search-fields" action="/interests/" method="get" hx-get="/interests/"
+		hx-trigger="input changed delay:300ms, submit" hx-target="#interest-results" hx-sync="this:replace"
+		hx-push-url="true">
+		<label class="visually-hidden" for="interest-query">Search interests</label>
+		<input id="interest-query" type="search" name="query" value="{{.Query}}" placeholder="Search interests..."
+			autocomplete="off">
+		<button type="submit">Search</button>
+	</form>
+</section>
+
+<section class="results-section" aria-labelledby="interest-results-heading">
+	<h2 id="interest-results-heading">All interests</h2>
+
+	<div class="table-container">
+		<table>
+			<thead>
+				<tr>
+					<th scope="col">Interest</th>
+				</tr>
+			</thead>
+			<tbody id="interest-results">
+				{{template "interest-rows" .}}
+			</tbody>
+		</table>
+	</div>
+</section>
 {{end}}
 
 {{define "interest-rows"}}
 {{range .Interests}}
 <tr>
-    <td>{{.Name}}</td>
+	<td>{{.Name}}</td>
 </tr>
 {{else}}
 <tr>
-    <td>No interests found.</td>
+	<td>No interests found.</td>
 </tr>
 {{end}}
 {{end}}

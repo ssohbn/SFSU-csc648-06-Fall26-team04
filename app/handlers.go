@@ -57,13 +57,23 @@ func (a *app) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", a.home)
 	mux.HandleFunc("GET /about/", a.about)
-	mux.HandleFunc("GET /studygroups/", a.studyGroups)
 	mux.HandleFunc("GET /interests/", a.interests)
 	mux.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
+	mux.HandleFunc("/", a.notFound)
 	return mux
+}
+
+// view is what the shared layout needs; every page's data embeds it.
+type view struct {
+	Title string
+	Path  string
+}
+
+func newView(r *http.Request, title string) view {
+	return view{Title: title, Path: r.URL.Path}
 }
 
 func isHTMXRequest(r *http.Request) bool {
@@ -75,7 +85,8 @@ func isHTMXRequest(r *http.Request) bool {
 func (a *app) render(w http.ResponseWriter, status int, page, name string, data any) {
 	var buf bytes.Buffer
 	if err := a.pages[page].ExecuteTemplate(&buf, name, data); err != nil {
-		a.serverError(w, err)
+		log.Printf("render %s: %v", page, err)
+		http.Error(w, "something went wrong, please try again", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -83,29 +94,35 @@ func (a *app) render(w http.ResponseWriter, status int, page, name string, data 
 	buf.WriteTo(w)
 }
 
-func (a *app) serverError(w http.ResponseWriter, err error) {
-	log.Printf("request failed: %v", err)
-	http.Error(w, "something went wrong, please try again", http.StatusInternalServerError)
+func (a *app) errorPage(w http.ResponseWriter, r *http.Request, status int, title, message string) {
+	type errorView struct {
+		view
+		Message string
+	}
+	a.render(w, status, "error.html", "base", errorView{view: newView(r, title), Message: message})
+}
+
+func (a *app) notFound(w http.ResponseWriter, r *http.Request) {
+	a.errorPage(w, r, http.StatusNotFound, "Page not found", "We couldn't find that page.")
+}
+
+func (a *app) serverError(w http.ResponseWriter, r *http.Request, err error) {
+	log.Printf("%s %s: %v", r.Method, r.URL.Path, err)
+	a.errorPage(w, r, http.StatusInternalServerError, "Something went wrong", "Please try again in a moment.")
 }
 
 func (a *app) home(w http.ResponseWriter, r *http.Request) {
-	a.render(w, http.StatusOK, "home.html", "base", nil)
-}
-
-func (a *app) about(w http.ResponseWriter, r *http.Request) {
-	a.render(w, http.StatusOK, "about.html", "base", nil)
-}
-
-func (a *app) studyGroups(w http.ResponseWriter, r *http.Request) {
-	groups, err := a.store.searchGroups(r.Context(), r.FormValue("query"))
+	query := r.FormValue("query")
+	groups, err := a.store.searchGroups(r.Context(), query)
 	if err != nil {
-		a.serverError(w, err)
+		a.serverError(w, r, err)
 		return
 	}
 
-	type searchStudyGroups struct {
-		Placeholder string
-		Groups      []StudyGroup
+	type homeView struct {
+		view
+		Query  string
+		Groups []StudyGroup
 	}
 
 	// send only the rows when htmx asks, and never cache one as the other
@@ -114,20 +131,24 @@ func (a *app) studyGroups(w http.ResponseWriter, r *http.Request) {
 		name = "rows"
 	}
 	w.Header().Add("Vary", "HX-Request")
-	a.render(w, http.StatusOK, "search.html", name, searchStudyGroups{
-		Placeholder: "search groups here",
-		Groups:      groups,
-	})
+	a.render(w, http.StatusOK, "home.html", name, homeView{view: newView(r, ""), Query: query, Groups: groups})
+}
+
+func (a *app) about(w http.ResponseWriter, r *http.Request) {
+	a.render(w, http.StatusOK, "about.html", "base", newView(r, "About us"))
 }
 
 func (a *app) interests(w http.ResponseWriter, r *http.Request) {
-	interests, err := a.store.searchInterests(r.Context(), r.FormValue("query"))
+	query := r.FormValue("query")
+	interests, err := a.store.searchInterests(r.Context(), query)
 	if err != nil {
-		a.serverError(w, err)
+		a.serverError(w, r, err)
 		return
 	}
 
-	type interestSearchResults struct {
+	type interestsView struct {
+		view
+		Query     string
 		Interests []Interest
 	}
 
@@ -136,5 +157,5 @@ func (a *app) interests(w http.ResponseWriter, r *http.Request) {
 		name = "interest-rows"
 	}
 	w.Header().Add("Vary", "HX-Request")
-	a.render(w, http.StatusOK, "interests.html", name, interestSearchResults{Interests: interests})
+	a.render(w, http.StatusOK, "interests.html", name, interestsView{view: newView(r, "Interests"), Query: query, Interests: interests})
 }
