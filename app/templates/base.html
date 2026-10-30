@@ -98,7 +98,7 @@
 		<h3 class="card-title"><a href="/groups/{{.ID}}">{{.Name}}</a></h3>
 		{{if or (ne .Mode "OPEN") .Role}}
 		<span class="badges">
-			{{if ne .Mode "OPEN"}}<span class="badge">{{.ModeLabel}}</span>{{end}}
+			{{if ne .Mode "OPEN"}}<span class="badge" data-mode="{{.Mode}}">{{.ModeLabel}}</span>{{end}}
 			{{with .Role}}{{if eq . "ADMIN"}}<span class="badge badge-ink">Yours</span>{{else}}<span class="badge badge-joined">Joined</span>{{end}}{{end}}
 		</span>
 		{{end}}

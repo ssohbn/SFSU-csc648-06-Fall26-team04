@@ -34,6 +34,35 @@
     --i-back: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 6 8.5 12l6 6'/%3E%3C/svg%3E");
     --i-ok: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12.5 2.7 2.7L16 10'/%3E%3C/svg%3E");
     --i-alert: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.5v5.5M12 16.5v.01'/%3E%3C/svg%3E");
+    --i-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5.5 12.5 4 4 9-9'/%3E%3C/svg%3E");
+    --i-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 5.5v13M5.5 12h13'/%3E%3C/svg%3E");
+
+    /* one icon per access mode, picked by data-mode */
+    --i-globe: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18'/%3E%3C/svg%3E");
+    --i-user: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='3.6'/%3E%3Cpath d='M4.8 20c.9-3.7 3.7-5.6 7.2-5.6s6.3 1.9 7.2 5.6'/%3E%3C/svg%3E");
+    --i-link: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1'/%3E%3Cpath d='M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'/%3E%3C/svg%3E");
+    --i-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19.5s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 6.8a4.2 4.2 0 0 1 7.5 2.5c0 5.6-7.5 10.2-7.5 10.2z'/%3E%3C/svg%3E");
+    --i-cap: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2.5 9.5 9.5-4.5 9.5 4.5-9.5 4.5z'/%3E%3Cpath d='M6.5 11.6v4.6c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.6M21.5 9.5v5'/%3E%3C/svg%3E");
+}
+
+[data-mode="OPEN"] {
+    --mode-icon: var(--i-globe);
+}
+
+[data-mode="ACCOUNT"] {
+    --mode-icon: var(--i-user);
+}
+
+[data-mode="INVITE"] {
+    --mode-icon: var(--i-link);
+}
+
+[data-mode="INTEREST"] {
+    --mode-icon: var(--i-heart);
+}
+
+[data-mode="SCHOOL"] {
+    --mode-icon: var(--i-cap);
 }
 
 *,
@@ -538,30 +567,7 @@ button.small,
     text-decoration: underline;
 }
 
-/* the x or + inside a chip */
-.chip-button,
-.chip-button:hover {
-    position: relative;
-    width: 26px;
-    min-height: 0;
-    height: 26px;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--muted);
-    font-size: 18px;
-    font-weight: 500;
-    line-height: 1;
-}
-
-.chip-button:hover {
-    background: var(--hover);
-    color: var(--ink);
-}
-
-.link-button::after,
-.chip-button::after {
+.link-button::after {
     content: "";
     position: absolute;
     inset: -9px;
@@ -588,6 +594,17 @@ button.small,
     color: var(--muted);
     font-size: 14px;
     font-weight: 400;
+}
+
+fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+legend {
+    padding: 0;
 }
 
 input:not([type="checkbox"], [type="radio"], [type="hidden"]),
@@ -677,6 +694,7 @@ input[type="radio"] {
     align-items: flex-start;
     gap: 10px;
     margin-bottom: 20px;
+    animation: rise-in .3s ease-out;
     padding: 12px 16px;
     border: 1px solid;
     border-radius: 10px;
@@ -735,6 +753,16 @@ input[type="radio"] {
     color: var(--field);
 }
 
+.badge[data-mode]::before {
+    content: "";
+    flex: none;
+    width: 13px;
+    height: 13px;
+    margin-right: 5px;
+    background: currentColor;
+    mask: var(--mode-icon) center / contain no-repeat;
+}
+
 .chips {
     display: flex;
     flex-wrap: wrap;
@@ -747,7 +775,6 @@ input[type="radio"] {
 .chips li {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
     overflow-wrap: anywhere;
     min-height: 34px;
     padding: 0 14px;
@@ -755,10 +782,6 @@ input[type="radio"] {
     border-radius: 999px;
     background: var(--field);
     font-size: 14.5px;
-}
-
-.chips form {
-    margin-right: -9px;
 }
 
 .tags {
@@ -779,6 +802,140 @@ input[type="radio"] {
     font-size: 12.5px;
     line-height: 1.4;
     overflow-wrap: anywhere;
+}
+
+/* tiles: outlined choices that fill in with a check badge when picked.
+   buttons use .is-on, labels around a hidden checkbox or radio use :checked */
+.tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* takes the free space on the last row, so its tiles keep their own width */
+.tiles::after {
+    content: "";
+    flex: 10 1 auto;
+}
+
+.tiles > li,
+.tiles form {
+    display: flex;
+    flex: 1 1 auto;
+}
+
+.tile {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 10px 20px;
+    border: 1.5px solid var(--accent);
+    border-radius: 10px;
+    background: var(--field);
+    color: var(--accent);
+    font: 600 15px/1.25 var(--sans);
+    text-align: center;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color .2s, border-color .2s, color .2s, transform .1s;
+}
+
+.tile:hover {
+    border-color: var(--accent-hover);
+    background: var(--hover);
+    color: var(--accent-hover);
+}
+
+.tile:active {
+    transform: scale(.97);
+}
+
+.tile.is-on,
+.tile:has(:checked) {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
+.tile.is-on:hover,
+.tile:has(:checked):hover {
+    border-color: var(--accent-hover);
+    background: var(--accent-hover);
+    color: #fff;
+}
+
+.tile::after {
+    content: "";
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8502c' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5.5 12.5 4 4 9-9'/%3E%3C/svg%3E") center / 13px no-repeat;
+    box-shadow: 0 1px 3px rgba(25, 43, 66, .25);
+    opacity: 0;
+    transform: scale(.4);
+    transition: opacity .15s, transform .25s cubic-bezier(.3, 1.6, .6, 1);
+    pointer-events: none;
+}
+
+.tile.is-on::after,
+.tile:has(:checked)::after {
+    opacity: 1;
+    transform: none;
+}
+
+.tile:has(:focus-visible) {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+}
+
+/* a tile that adds something new */
+.tile-new {
+    border-style: dashed;
+}
+
+.tile-new::before {
+    content: "";
+    flex: none;
+    width: 16px;
+    height: 16px;
+    background: currentColor;
+    mask: var(--i-plus) center / contain no-repeat;
+}
+
+/* guests see the tiles, but can't pick them */
+span.tile,
+span.tile:hover {
+    border-color: var(--line-strong);
+    background: var(--field);
+    color: var(--ink);
+    cursor: default;
+}
+
+.tiles-sm {
+    gap: 12px;
+}
+
+.tiles-sm .tile {
+    min-height: 40px;
+    padding: 6px 14px;
+    font-size: 14px;
+}
+
+.tiles > .empty {
+    flex-basis: 100%;
+    justify-content: center;
 }
 
 /* place, time and member counts get an icon in front */
@@ -831,12 +988,13 @@ input[type="radio"] {
     border-radius: 12px;
     background: var(--surface);
     box-shadow: var(--shadow-card);
-    transition: border-color .15s, box-shadow .15s;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
 }
 
 .card:hover {
     border-color: var(--line-strong);
     box-shadow: var(--shadow-pop);
+    transform: translateY(-2px);
 }
 
 .card-top {
@@ -996,16 +1154,8 @@ input[type="radio"] {
     margin-top: 18px;
 }
 
-.filter-group {
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-}
-
 .filter-group legend {
     margin-bottom: 8px;
-    padding: 0;
     color: var(--muted);
     font-size: 12px;
     font-weight: 700;
@@ -1019,55 +1169,61 @@ input[type="radio"] {
     gap: 8px;
 }
 
+/* filter chips: a check mark slides in when on */
 .chip-toggle {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-height: 34px;
-    padding: 0 13px 0 10px;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
     background: var(--field);
+    color: var(--accent);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     user-select: none;
-    transition: background-color .15s, border-color .15s, color .15s;
+    transition: background-color .2s, border-color .2s, color .2s;
 }
 
 .chip-toggle:hover {
-    border-color: var(--ink);
+    border-color: var(--accent-hover);
+    background: var(--hover);
+    color: var(--accent-hover);
 }
 
-.chip-toggle input {
-    appearance: none;
+.chip-toggle::before {
+    content: "";
     flex: none;
-    width: 16px;
+    width: 0;
     height: 16px;
-    margin: 0;
-    border: 1.5px solid var(--input-line);
-    border-radius: 4px;
-    background: var(--field) no-repeat center / 12px;
+    margin-right: -6px;
+    background: currentColor;
+    mask: var(--i-check) center / 16px no-repeat;
+    transition: width .2s, margin .2s;
 }
 
-.chip-toggle input:checked {
-    border-color: var(--field);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23192b42' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5.5 12.5 4 4 9-9'/%3E%3C/svg%3E");
+.chip-toggle:has(:checked)::before {
+    width: 16px;
+    margin-right: 0;
 }
 
-.chip-toggle input:focus-visible {
-    outline: none;
-}
-
-.chip-toggle:has(input:focus-visible) {
+.chip-toggle:has(:focus-visible) {
     outline: 3px solid var(--ink);
     outline-offset: 2px;
 }
 
-.chip-toggle:has(input:checked) {
-    border-color: var(--ink);
-    background: var(--ink);
-    color: var(--field);
+.chip-toggle:has(:checked) {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+
+.chip-toggle:has(:checked):hover {
+    border-color: var(--accent-hover);
+    background: var(--accent-hover);
 }
 
 .home-hint {
@@ -1342,16 +1498,8 @@ input.invite-link {
     gap: 8px;
 }
 
-.choices {
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-}
-
 .choices legend {
     margin-bottom: 16px;
-    padding: 0;
     font: 700 1.375rem/1.15 var(--serif);
     letter-spacing: -0.01em;
 }
@@ -1359,48 +1507,47 @@ input.invite-link {
 .choice-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 12px;
+    gap: 14px;
 }
 
+/* a mode tile: icon, name and what it means */
 .choice {
-    display: flex;
+    flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    padding: 14px;
-    border: 1px solid var(--line-strong);
-    border-radius: 10px;
-    background: var(--field);
-    cursor: pointer;
-    transition: border-color .15s, box-shadow .15s;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 16px 18px;
+    text-align: left;
 }
 
-.choice:hover {
-    border-color: var(--ink);
-}
-
-.choice:has(input:checked) {
-    border-color: var(--ink);
-    box-shadow: inset 0 0 0 1px var(--ink);
-    background: #fff;
-}
-
-.choice input {
+.choice::before {
+    content: "";
     flex: none;
-    accent-color: var(--ink);
-    width: 18px;
-    height: 18px;
-    margin: 2px 0 0;
-}
-
-.choice strong {
-    display: block;
-    font-size: 15px;
+    width: 26px;
+    height: 26px;
+    margin-bottom: 8px;
+    background: currentColor;
+    mask: var(--mode-icon) center / contain no-repeat;
 }
 
 .choice .hint {
-    display: block;
-    margin-top: 4px;
+    font-weight: 400;
     line-height: 1.45;
+}
+
+.choice:has(:checked) .hint {
+    color: #fff;
+}
+
+/* a group of checkboxes laid out like the other fields */
+fieldset.field > legend {
+    margin-bottom: 6px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+fieldset.field > .tiles {
+    margin: 6px 0 12px;
 }
 
 .danger-zone {
@@ -1454,60 +1601,31 @@ input.invite-link {
     margin-top: 20px;
 }
 
-/* interests */
-.interest-search {
-    margin-bottom: 14px;
+/* interests: a centered picker */
+.picker-head {
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
 }
 
-.interest-list {
-    margin: 18px 0 0;
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
-    box-shadow: var(--shadow-card);
-    list-style: none;
+.picker-head .lead {
+    margin: 10px auto 0;
 }
 
-.interest-list li {
-    display: flex;
-    align-items: center;
-    gap: 12px 16px;
-    min-height: 60px;
-    padding: 10px 18px;
-    border-top: 1px solid var(--line);
+.picker-search {
+    max-width: 520px;
+    margin: 0 auto 28px;
 }
 
-.interest-list li:first-child {
-    border-top: 0;
+.picker-hint {
+    margin-bottom: 16px;
+    text-align: center;
 }
 
-.interest-name {
-    flex: 1;
-    min-width: 0;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-}
-
-.interest-name .hint {
-    display: block;
-    font-weight: 400;
-}
-
-.interest-people {
-    color: var(--muted);
-    font-size: 14px;
-    white-space: nowrap;
-}
-
-.interest-new {
-    background: var(--hover);
-}
-
-.interest-list .interest-empty {
-    justify-content: center;
-    color: var(--muted);
+.picker-foot {
+    margin-top: 36px;
+    text-align: center;
 }
 
 /* about */
@@ -1708,10 +1826,18 @@ input.invite-link {
     }
 }
 
+@keyframes rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
         transition: none !important;
+        animation: none !important;
     }
 }

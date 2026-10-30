@@ -13,23 +13,15 @@
 		<section class="panel" aria-labelledby="interests-heading">
 			<h2 id="interests-heading">Your interests</h2>
 
-			{{if .Interests}}
+			{{with .Interests}}
 			<ul class="chips">
-				{{range .Interests}}
-				<li>
-					{{.Name}}
-					<form class="inline" method="post" action="/interests/{{.ID}}/remove">
-						<input type="hidden" name="next" value="/me">
-						<button class="chip-button" type="submit" aria-label="Remove {{.Name}} from your interests">&times;</button>
-					</form>
-				</li>
-				{{end}}
+				{{range .}}<li>{{.Name}}</li>{{end}}
 			</ul>
 			{{else}}
 			<p class="hint">You haven't added any interests yet.</p>
 			{{end}}
 
-			<p class="panel-foot"><a class="button secondary" href="/interests/">Find interests</a></p>
+			<p class="panel-foot"><a class="button secondary" href="/interests/">{{if .Interests}}Edit interests{{else}}Add interests{{end}}</a></p>
 		</section>
 
 		<section class="panel" aria-labelledby="profile-heading">

@@ -22,8 +22,8 @@
 				<fieldset class="filter-group">
 					<legend>Show only</legend>
 					<div class="chip-list">
-						<label class="chip-toggle"><input type="checkbox" name="match" value="1" {{if .Match}}checked{{end}}><span>Shares my interests</span></label>
-						<label class="chip-toggle"><input type="checkbox" name="mine" value="1" {{if .Mine}}checked{{end}}><span>My groups</span></label>
+						<label class="chip-toggle"><input class="visually-hidden" type="checkbox" name="match" value="1" {{if .Match}}checked{{end}}><span>Shares my interests</span></label>
+						<label class="chip-toggle"><input class="visually-hidden" type="checkbox" name="mine" value="1" {{if .Mine}}checked{{end}}><span>My groups</span></label>
 					</div>
 				</fieldset>
 				{{end}}
@@ -33,7 +33,7 @@
 					<legend>Topics</legend>
 					<div class="chip-list">
 						{{range .}}
-						<label class="chip-toggle"><input type="checkbox" name="topic" value="{{.ID}}" {{if index $.Picked .ID}}checked{{end}}><span>{{.Name}}</span></label>
+						<label class="chip-toggle"><input class="visually-hidden" type="checkbox" name="topic" value="{{.ID}}" {{if index $.Picked .ID}}checked{{end}}><span>{{.Name}}</span></label>
 						{{end}}
 					</div>
 				</fieldset>

@@ -204,10 +204,13 @@ func TestProfileAndInterests(t *testing.T) {
 	}
 
 	_, body, _ := c.get("/interests/?query=a")
-	if !strings.Contains(body, "Remove") || !strings.Contains(body, "Add") {
+	if !strings.Contains(body, `aria-pressed="true"`) || !strings.Contains(body, `aria-pressed="false"`) {
 		t.Fatalf("interest buttons: %s", body)
 	}
-	if _, body, _ := c.get("/interests/?query=Graph+Theory"); !strings.Contains(body, "Create &ldquo;Graph Theory&rdquo;") {
+	if _, body, _ := c.get("/interests/?ok=interest&query=Linear+Algebra"); !strings.Contains(body, "autofocus") {
+		t.Fatalf("new interest should get the focus: %s", body)
+	}
+	if _, body, _ := c.get("/interests/?query=Graph+Theory"); !strings.Contains(body, "Add &ldquo;Graph Theory&rdquo;") {
 		t.Fatalf("create offer: %s", body)
 	}
 

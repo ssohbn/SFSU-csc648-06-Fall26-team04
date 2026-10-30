@@ -1,59 +1,63 @@
 {{define "content"}}
-<div class="wrap wrap-narrow">
-	<header class="page-head">
-		<h1>Interests</h1>
-		<p class="lead">Study groups are tagged with interests. They are used for filtering and organizing study
-			groups by what they are studying.</p>
+<!-- a new search or pick cancels the one still loading, so an older list can't land over a newer one -->
+<div class="wrap wrap-narrow" hx-sync="this:replace">
+	<header class="picker-head">
+		<h1>Add your interests</h1>
+		<p class="lead">Choose at least one. Study groups on the same topics can find you.</p>
 	</header>
 	{{template "flash" .}}
 
-	<form class="interest-search" action="/interests/" method="get" hx-get="/interests/"
-		hx-trigger="input changed delay:300ms, submit" hx-target="#interest-results" hx-sync="this:replace"
-		hx-push-url="true">
+	{{if not .User}}
+	<p class="hint picker-hint"><a href="/signin?next=/interests/">Sign in</a> to add interests to your profile, or
+		<a href="/signup?next=/interests/">sign up</a> for free.</p>
+	{{end}}
+
+	<form class="picker-search" action="/interests/" method="get" hx-get="/interests/"
+		hx-trigger="input changed delay:300ms, submit" hx-target="#interest-results" hx-push-url="true">
 		<div class="search-row">
 			<label class="visually-hidden" for="interest-query">Search interests</label>
-			<input id="interest-query" type="search" name="query" value="{{.Query}}" placeholder="Search interests"
-				autocomplete="off">
+			<input id="interest-query" type="search" name="query" value="{{.Query}}"
+				placeholder="{{if .User}}Search or add an interest{{else}}Search interests{{end}}" autocomplete="off">
 			<button type="submit">Search</button>
 		</div>
 	</form>
 
-	{{if not .User}}
-	<p class="hint"><a href="/signin?next=/interests/">Sign in</a> to add interests to your profile.</p>
-	{{end}}
-
-	<ul id="interest-results" class="interest-list" aria-label="Interests">
+	<!-- a pick posts, follows the redirect back here and swaps in the new list. the button keeps its
+		id, so focus stays on it and htmx carries its old class over to animate the change. a new
+		interest comes back with a notice, which gives its tile the focus -->
+	<ul id="interest-results" class="tiles" aria-label="Interests" hx-target="this">
 		{{template "interest-rows" .}}
 	</ul>
+
+	{{if .User}}
+	<p class="picker-foot"><a class="button" href="/">Find study groups</a></p>
+	{{end}}
 </div>
 {{end}}
 
 {{define "interest-rows"}}
 {{with .NewName}}
-<li class="interest-new">
-	<span class="interest-name">{{.}}<span class="hint">Not on the list yet.</span></span>
-	<form class="inline" method="post" action="/interests/">
+<li>
+	<form method="post" action="/interests/" hx-post="/interests/">
 		<input type="hidden" name="name" value="{{.}}">
-		<button class="small" type="submit">Create &ldquo;{{.}}&rdquo;</button>
+		<button class="tile tile-new" type="submit">Add &ldquo;{{.}}&rdquo;</button>
 	</form>
 </li>
 {{end}}
 {{range .Interests}}
 <li>
-	<span class="interest-name">{{.Name}}</span>
-	<span class="interest-people">{{.People}} {{if eq .People 1}}person{{else}}people{{end}}</span>
 	{{if $.User}}
-	<form class="inline" method="post" action="/interests/{{.ID}}/{{if .Mine}}remove{{else}}add{{end}}">
+	{{$do := "add"}}{{if .Mine}}{{$do = "remove"}}{{end}}
+	<form method="post" action="/interests/{{.ID}}/{{$do}}" hx-post="/interests/{{.ID}}/{{$do}}">
 		<input type="hidden" name="next" value="{{$.Back}}">
-		{{if .Mine}}
-		<button class="small secondary" type="submit" aria-label="Remove {{.Name}} from your interests">Remove</button>
-		{{else}}
-		<button class="small" type="submit" aria-label="Add {{.Name}} to your interests">Add</button>
-		{{end}}
+		<button id="interest-{{.ID}}" class="tile{{if .Mine}} is-on{{end}}" type="submit" aria-pressed="{{.Mine}}"
+			{{if and $.Notice (eq .Name $.Query)}}autofocus{{end}}>{{.Name}}</button>
 	</form>
+	{{else}}
+	<span class="tile">{{.Name}}</span>
 	{{end}}
 </li>
 {{else}}
-{{if not .NewName}}<li class="interest-empty">No interests found.</li>{{end}}
+{{if not .NewName}}<li class="empty">No interests found.</li>{{end}}
 {{end}}
 {{end}}

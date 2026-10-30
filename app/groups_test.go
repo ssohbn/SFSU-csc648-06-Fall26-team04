@@ -310,8 +310,26 @@ func TestGroupForm(t *testing.T) {
 
 	path := gus.createGroup(url.Values{"name": {"  Calc   II "}, "topics": {" Linear   Algebra, linear algebra,SQL "}})
 	_, body, _ := gus.get(path + "/edit")
-	if !strings.Contains(body, `value="Calc II"`) || !strings.Contains(body, `value="Linear Algebra, SQL"`) {
-		t.Errorf("edit form should hold the cleaned name and topics: %s", body)
+	if !strings.Contains(body, `value="Calc II"`) || !strings.Contains(body, `value="Linear Algebra" checked`) ||
+		!strings.Contains(body, `value="SQL" checked`) || !strings.Contains(body, `name="topics" value=""`) {
+		t.Errorf("edit form should hold the cleaned name and tick its topics: %s", body)
+	}
+
+	// ticked and typed topics merge, ignoring case, and share the limit of 8
+	topics := url.Values{"name": {"ab"}, "short": {"x"}, "mode": {modeOpen}, "topic": {"SQL"}, "topics": {"sql, Graphs"}}
+	if _, body, _ := gus.post("/groups/new", topics); !strings.Contains(body, `value="SQL" checked`) || !strings.Contains(body, `value="sql, Graphs"`) {
+		t.Errorf("a turned down form should keep its topics: %s", body)
+	}
+	topics.Set("name", "Graphs")
+	var merged int
+	s.db.QueryRow(`SELECT COUNT(*) FROM StudyGroupInterests WHERE StudyGroupID = ?`, strings.TrimPrefix(gus.createGroup(topics), "/groups/")).Scan(&merged)
+	if merged != 2 {
+		t.Errorf("want topics SQL and Graphs, got %d", merged)
+	}
+	topics["topic"] = []string{"aa", "bb", "cc", "dd", "ee"}
+	topics.Set("topics", "ff,gg,hh,ii")
+	if code, body, _ := gus.post("/groups/new", topics); code != http.StatusUnprocessableEntity || !strings.Contains(body, "Use up to 8 topics.") {
+		t.Errorf("9 topics in all: %d", code)
 	}
 	code, _, loc := gus.post(path+"/edit", url.Values{
 		"name": {"Calc III"}, "short": {"vectors"}, "mode": {modeAccount}, "topics": {"SQL"}, "place": {"Library"},

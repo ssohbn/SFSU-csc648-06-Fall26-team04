@@ -311,7 +311,7 @@ func (a *app) deleteGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.PostFormValue("confirm") != "yes" {
-		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, topicList(g), "Tick the box to confirm you want to delete this group.")
+		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, topicNames(g), "", "Tick the box to confirm you want to delete this group.")
 		return
 	}
 	if err := a.store.deleteGroup(r.Context(), g.ID); err != nil {
@@ -327,12 +327,12 @@ func (a *app) newGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodPost {
-		a.renderGroupForm(w, r, http.StatusOK, StudyGroup{Mode: modeOpen}, "", "")
+		a.renderGroupForm(w, r, http.StatusOK, StudyGroup{Mode: modeOpen}, nil, "", "")
 		return
 	}
 	g, topics, problem := readGroupForm(r, user, StudyGroup{})
 	if problem != "" {
-		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, r.PostFormValue("topics"), problem)
+		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, r.PostForm["topic"], r.PostFormValue("topics"), problem)
 		return
 	}
 	id, err := a.store.createGroup(r.Context(), user.ID, g, topics)
@@ -349,12 +349,12 @@ func (a *app) editGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodPost {
-		a.renderGroupForm(w, r, http.StatusOK, g, topicList(g), "")
+		a.renderGroupForm(w, r, http.StatusOK, g, topicNames(g), "", "")
 		return
 	}
 	g, topics, problem := readGroupForm(r, currentUser(r), g)
 	if problem != "" {
-		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, r.PostFormValue("topics"), problem)
+		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, r.PostForm["topic"], r.PostFormValue("topics"), problem)
 		return
 	}
 	if err := a.store.updateGroup(r.Context(), g, topics); errors.Is(err, sql.ErrNoRows) {
@@ -367,11 +367,23 @@ func (a *app) editGroup(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, groupPath(g.ID, "")+"?ok=groupsaved", http.StatusSeeOther)
 }
 
-func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int, g StudyGroup, topics, problem string) {
+// renderGroupForm shows every interest as a topic to tick, with picked ticked,
+// and other in the box for new topics.
+func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int, g StudyGroup, picked []string, other, problem string) {
+	interests, err := a.store.searchInterests(r.Context(), "", 0)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+	type topic struct {
+		Name    string
+		Checked bool
+	}
 	type groupFormView struct {
 		view
 		Group  StudyGroup
-		Topics string
+		Topics []topic
+		Other  string
 		Modes  []modeChoice
 		School string // the school a school group is for, "" if there's none to use
 	}
@@ -379,19 +391,22 @@ func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int
 	if g.ID != 0 {
 		title = "Edit group"
 	}
-	v := groupFormView{view: newView(r, title), Group: g, Topics: topics, Modes: modeChoices,
+	v := groupFormView{view: newView(r, title), Group: g, Other: other, Modes: modeChoices,
 		School: cmp.Or(g.SchoolDomain, schoolDomain(currentUser(r).Email))}
+	for _, i := range interests {
+		v.Topics = append(v.Topics, topic{i.Name, slices.Contains(picked, i.Name)})
+	}
 	v.Error = problem
 	v.Map = true
 	a.render(w, status, "groupform.html", "base", v)
 }
 
-func topicList(g StudyGroup) string {
+func topicNames(g StudyGroup) []string {
 	names := make([]string, len(g.Interests))
 	for i, t := range g.Interests {
 		names[i] = t.Name
 	}
-	return strings.Join(names, ", ")
+	return names
 }
 
 // readGroupForm returns the group as submitted, its cleaned topics, and what's
@@ -424,14 +439,23 @@ func readGroupForm(r *http.Request, user *User, g StudyGroup) (StudyGroup, []str
 		}
 	}
 
+	// the ticked topics, then the new ones typed in with commas
 	var topics []string
-	for t := range strings.SplitSeq(r.PostFormValue("topics"), ",") {
+	add := func(t string) bool {
 		t = cleanName(t)
 		if t != "" && !slices.ContainsFunc(topics, func(s string) bool { return strings.EqualFold(s, t) }) {
 			topics = append(topics, t)
 		}
 		// one past the limit is enough to turn the form down
-		if len(topics) > 8 {
+		return len(topics) <= 8
+	}
+	for _, t := range r.PostForm["topic"] {
+		if !add(t) {
+			break
+		}
+	}
+	for t := range strings.SplitSeq(r.PostFormValue("topics"), ",") {
+		if !add(t) {
 			break
 		}
 	}

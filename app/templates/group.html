@@ -4,7 +4,7 @@
 	{{template "flash" .}}
 
 	<header class="group-head">
-		<span class="badge">{{.Mode.Label}}</span>
+		<span class="badge" data-mode="{{.Group.Mode}}">{{.Mode.Label}}</span>
 		<h1>{{.Group.Name}}</h1>
 		<p class="lead">{{.Group.ShortDescription}}</p>
 	</header>
@@ -53,7 +53,7 @@
 						<button class="button-block" type="submit">Join group</button>
 					</form>
 					{{else}}
-					<p class="hint">Add one of this group's topics to your profile to join. Use the + next to a topic.</p>
+					<p class="hint">Add one of this group's topics to your interests to join. Pick one under Topics.</p>
 					{{end}}
 				</div>
 			</section>
@@ -70,19 +70,22 @@
 
 				{{with .Group.Interests}}
 				<h3 class="topics-heading">Topics</h3>
-				<ul class="chips">
+				{{if $.NeedTopic}}
+				<ul class="tiles tiles-sm">
 					{{range .}}
 					<li>
-						{{.Name}}
-						{{if $.NeedTopic}}
-						<form class="inline" method="post" action="/interests/{{.ID}}/add">
+						<form method="post" action="/interests/{{.ID}}/add">
 							<input type="hidden" name="next" value="/groups/{{$.Group.ID}}">
-							<button class="chip-button" type="submit" aria-label="Add {{.Name}} to your interests">+</button>
+							<button class="tile tile-new" type="submit" aria-label="Add {{.Name}} to your interests">{{.Name}}</button>
 						</form>
-						{{end}}
 					</li>
 					{{end}}
 				</ul>
+				{{else}}
+				<ul class="chips">
+					{{range .}}<li>{{.Name}}</li>{{end}}
+				</ul>
+				{{end}}
 				{{end}}
 			</section>
 

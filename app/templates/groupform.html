@@ -34,12 +34,20 @@
 					<textarea id="long" name="long" rows="5" maxlength="2000">{{.Group.LongDescription}}</textarea>
 				</div>
 
-				<div class="field">
-					<label for="topics">Topics</label>
-					<input id="topics" name="topics" value="{{.Topics}}" maxlength="400" placeholder="calculus, finals"
+				<fieldset class="field">
+					<legend>Topics</legend>
+					{{with .Topics}}
+					<div class="tiles tiles-sm">
+						{{range .}}
+						<label class="tile"><input class="visually-hidden" type="checkbox" name="topic" value="{{.Name}}"{{if .Checked}} checked{{end}}>{{.Name}}</label>
+						{{end}}
+					</div>
+					{{end}}
+					<label for="topics">{{if .Topics}}New topics{{else}}Add topics{{end}}</label>
+					<input id="topics" name="topics" value="{{.Other}}" maxlength="400" placeholder="calculus, finals"
 						aria-describedby="topics-hint">
-					<p class="hint" id="topics-hint">Separate topics with commas. People search and filter groups by topic.</p>
-				</div>
+					<p class="hint" id="topics-hint">Up to 8 topics in all. Separate new ones with commas.</p>
+				</fieldset>
 			</section>
 
 			<section class="panel form-panel" aria-labelledby="where-heading">
@@ -75,13 +83,11 @@
 				<legend>Who can join</legend>
 				<div class="choice-list">
 					{{range .Modes}}
-					<label class="choice">
-						<input type="radio" name="mode" value="{{.Value}}" required {{if eq .Value $.Group.Mode}}checked{{end}}>
-						<span>
-							<strong>{{.Label}}{{if eq .Value "SCHOOL"}}{{with $.School}} ({{.}}){{end}}{{end}}</strong>
-							<span class="hint">{{.Help}}{{if and (eq .Value "SCHOOL") (not $.School)}} Needs a .edu email on
-								your profile.{{end}}</span>
-						</span>
+					<label class="tile choice" data-mode="{{.Value}}">
+						<input class="visually-hidden" type="radio" name="mode" value="{{.Value}}" required {{if eq .Value $.Group.Mode}}checked{{end}}>
+						<strong>{{.Label}}{{if eq .Value "SCHOOL"}}{{with $.School}} ({{.}}){{end}}{{end}}</strong>
+						<span class="hint">{{.Help}}{{if and (eq .Value "SCHOOL") (not $.School)}} Needs a .edu email on
+							your profile.{{end}}</span>
 					</label>
 					{{end}}
 				</div>

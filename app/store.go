@@ -56,10 +56,9 @@ type Member struct {
 }
 
 type Interest struct {
-	ID     int64
-	Name   string
-	People int
-	Mine   bool
+	ID   int64
+	Name string
+	Mine bool
 }
 
 // User never carries the password hash, so views can't leak it.
@@ -89,14 +88,13 @@ func takenErr(err error) error {
 	return err
 }
 
-// searchInterests also counts people per interest and marks the ones userID
-// has; pass 0 for a guest.
+// searchInterests also marks the ones userID has; pass 0 for a guest.
 func (s *store) searchInterests(ctx context.Context, query string, userID int64) ([]Interest, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT i.Id, i.Name, COUNT(ui.UserID), COALESCE(MAX(ui.UserID = ?2), 0)
-		FROM Interests i LEFT JOIN UserInterests ui ON ui.InterestID = i.Id
+		SELECT i.Id, i.Name, EXISTS (SELECT 1 FROM UserInterests WHERE UserID = ?2 AND InterestID = i.Id)
+		FROM Interests i
 		WHERE instr(lower(i.Name), lower(?1)) > 0
-		GROUP BY i.Id ORDER BY i.Name`, query, userID)
+		ORDER BY i.Name`, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +103,7 @@ func (s *store) searchInterests(ctx context.Context, query string, userID int64)
 	var interests []Interest
 	for rows.Next() {
 		var i Interest
-		if err := rows.Scan(&i.ID, &i.Name, &i.People, &i.Mine); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Mine); err != nil {
 			return nil, err
 		}
 		interests = append(interests, i)
