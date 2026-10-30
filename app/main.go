@@ -36,6 +36,8 @@ func main() {
 		Addr:              ":" + port,
 		Handler:           app.routes(),
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       2 * time.Minute,
 	}
 	log.Printf("starting server, listening on: %s (database %s)", port, dbPath)
 	log.Fatal(srv.ListenAndServe())

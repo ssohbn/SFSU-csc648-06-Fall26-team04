@@ -143,6 +143,18 @@ func TestCrossSiteFormsAreBlocked(t *testing.T) {
 	}
 }
 
+func TestBigFormsAreNotRead(t *testing.T) {
+	srv, _ := newTestServer(t)
+	// past 1 MiB the form isn't parsed at all, so this signup has no username
+	code, body, _ := newClient(t, srv).post("/signup", url.Values{
+		"username": {"maeve"}, "email": {"maeve@sfsu.edu"}, "password": {"correct horse"}, "confirm": {"correct horse"},
+		"pad": {strings.Repeat("x", 2<<20)},
+	})
+	if code != http.StatusUnprocessableEntity || !strings.Contains(body, "Usernames are 3 to 30") {
+		t.Fatalf("got %d %.200s", code, body)
+	}
+}
+
 func TestProfileAndInterests(t *testing.T) {
 	srv, s := newTestServer(t)
 	exec(t, s, `INSERT INTO Interests (Name) VALUES ('Calculus'), ('Databases')`)

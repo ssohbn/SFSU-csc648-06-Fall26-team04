@@ -302,13 +302,20 @@ func (s *store) updateGroup(ctx context.Context, g StudyGroup, topics []string) 
 	defer tx.Rollback()
 	lat, lng := g.Pin.columns()
 	// groups added straight to the database have no invite code yet
-	if _, err := tx.ExecContext(ctx, `
+	res, err := tx.ExecContext(ctx, `
 		UPDATE StudyGroups SET Name = ?, ShortDescription = ?, LongDescription = ?, Mode = ?, SchoolDomain = ?,
 			MeetingPlace = ?, MeetingTime = ?, Latitude = ?, Longitude = ?, InviteCode = COALESCE(InviteCode, ?)
 		WHERE Id = ?`,
 		g.Name, g.ShortDescription, g.LongDescription, g.Mode, g.SchoolDomain,
-		g.MeetingPlace, g.MeetingTime, lat, lng, rand.Text(), g.ID); err != nil {
+		g.MeetingPlace, g.MeetingTime, lat, lng, rand.Text(), g.ID)
+	if err != nil {
 		return err
+	}
+	// the group was deleted after the form loaded
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n == 0 {
+		return sql.ErrNoRows
 	}
 	if err := setTopics(ctx, tx, g.ID, topics); err != nil {
 		return err
@@ -340,9 +347,11 @@ func (s *store) deleteGroup(ctx context.Context, id int64) error {
 	return err
 }
 
+// joinGroup does nothing if the group was deleted after its page loaded.
 func (s *store) joinGroup(ctx context.Context, userID, groupID int64) error {
-	_, err := s.db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO StudyGroupEnrollment (UserID, StudyGroupID) VALUES (?, ?)`, userID, groupID)
+	_, err := s.db.ExecContext(ctx, `
+		INSERT OR IGNORE INTO StudyGroupEnrollment (UserID, StudyGroupID)
+		SELECT ?, Id FROM StudyGroups WHERE Id = ?`, userID, groupID)
 	return err
 }
 

@@ -1,7 +1,10 @@
 package main
 
 import (
+	"cmp"
 	"crypto/subtle"
+	"database/sql"
+	"errors"
 	"math"
 	"net/http"
 	"net/url"
@@ -120,7 +123,8 @@ func hasTopic(g StudyGroup, ids map[int64]bool) bool {
 func (a *app) loadGroup(w http.ResponseWriter, r *http.Request, invite string) (StudyGroup, access, bool) {
 	acc := access{user: currentUser(r)}
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
+	// the store reads 0 as every group
+	if err != nil || id < 1 {
 		a.notFound(w, r)
 		return StudyGroup{}, acc, false
 	}
@@ -353,7 +357,10 @@ func (a *app) editGroup(w http.ResponseWriter, r *http.Request) {
 		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, r.PostFormValue("topics"), problem)
 		return
 	}
-	if err := a.store.updateGroup(r.Context(), g, topics); err != nil {
+	if err := a.store.updateGroup(r.Context(), g, topics); errors.Is(err, sql.ErrNoRows) {
+		a.notFound(w, r)
+		return
+	} else if err != nil {
 		a.serverError(w, r, err)
 		return
 	}
@@ -366,13 +373,14 @@ func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int
 		Group  StudyGroup
 		Topics string
 		Modes  []modeChoice
-		School string // the user's school, "" without an .edu email
+		School string // the school a school group is for, "" if there's none to use
 	}
 	title := "Start a group"
 	if g.ID != 0 {
 		title = "Edit group"
 	}
-	v := groupFormView{view: newView(r, title), Group: g, Topics: topics, Modes: modeChoices, School: schoolDomain(currentUser(r).Email)}
+	v := groupFormView{view: newView(r, title), Group: g, Topics: topics, Modes: modeChoices,
+		School: cmp.Or(g.SchoolDomain, schoolDomain(currentUser(r).Email))}
 	v.Error = problem
 	v.Map = true
 	a.render(w, status, "groupform.html", "base", v)
@@ -395,8 +403,11 @@ func readGroupForm(r *http.Request, user *User, g StudyGroup) (StudyGroup, []str
 	g.MeetingPlace = strings.TrimSpace(r.PostFormValue("place"))
 	g.MeetingTime = strings.TrimSpace(r.PostFormValue("time"))
 	g.Mode = r.PostFormValue("mode")
-	g.SchoolDomain = ""
-	if g.Mode == modeSchool {
+	// a school group keeps its school when the organizer's email changes
+	switch {
+	case g.Mode != modeSchool:
+		g.SchoolDomain = ""
+	case g.SchoolDomain == "":
 		g.SchoolDomain = schoolDomain(user.Email)
 	}
 
@@ -414,10 +425,14 @@ func readGroupForm(r *http.Request, user *User, g StudyGroup) (StudyGroup, []str
 	}
 
 	var topics []string
-	for _, t := range strings.Split(r.PostFormValue("topics"), ",") {
+	for t := range strings.SplitSeq(r.PostFormValue("topics"), ",") {
 		t = cleanName(t)
 		if t != "" && !slices.ContainsFunc(topics, func(s string) bool { return strings.EqualFold(s, t) }) {
 			topics = append(topics, t)
+		}
+		// one past the limit is enough to turn the form down
+		if len(topics) > 8 {
+			break
 		}
 	}
 

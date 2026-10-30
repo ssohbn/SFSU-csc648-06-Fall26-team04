@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -128,6 +130,9 @@ func TestGroupVisibility(t *testing.T) {
 	}
 	if status, _, _ := gus.get(paths[modeInvite] + "?invite=WRONG"); status != http.StatusNotFound {
 		t.Errorf("wrong invite code: %d", status)
+	}
+	if status, _, _ := gus.get("/groups/0"); status != http.StatusNotFound {
+		t.Errorf("group 0: %d", status)
 	}
 	if _, body, _ := owner.get(paths[modeInvite]); !strings.Contains(body, "?invite="+code) {
 		t.Errorf("the owner should see the invite link")
@@ -257,6 +262,23 @@ func TestGroupMembership(t *testing.T) {
 	}
 }
 
+// a delete can land between loading a group's page and posting its form
+func TestDeletedGroupWrites(t *testing.T) {
+	srv, s := newTestServer(t)
+	newClient(t, srv).signup("gus", "gus@gmail.com")
+	var gusID int64
+	if err := s.db.QueryRow(`SELECT Id FROM Users WHERE Username = 'gus'`).Scan(&gusID); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := s.joinGroup(ctx, gusID, 99); err != nil {
+		t.Errorf("join a deleted group: %v", err)
+	}
+	if err := s.updateGroup(ctx, StudyGroup{ID: 99, Name: "Gone", Mode: modeOpen}, []string{"sql"}); !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("edit a deleted group: %v", err)
+	}
+}
+
 func TestGroupForm(t *testing.T) {
 	srv, s := newTestServer(t)
 	gus := newClient(t, srv)
@@ -304,10 +326,34 @@ func TestGroupForm(t *testing.T) {
 
 	sid := newClient(t, srv)
 	sid.signup("sid", "sid@mail.sfsu.edu")
-	sid.createGroup(url.Values{"name": {"SFSU only"}, "mode": {modeSchool}})
-	var domain string
-	if err := s.db.QueryRow(`SELECT SchoolDomain FROM StudyGroups WHERE Name = 'SFSU only'`).Scan(&domain); err != nil || domain != "sfsu.edu" {
-		t.Errorf("school group domain: %q %v", domain, err)
+	school := sid.createGroup(url.Values{"name": {"SFSU only"}, "mode": {modeSchool}})
+	domain := func() string {
+		var d string
+		if err := s.db.QueryRow(`SELECT SchoolDomain FROM StudyGroups WHERE Name = 'SFSU only'`).Scan(&d); err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}
+	if d := domain(); d != "sfsu.edu" {
+		t.Errorf("school group domain: %q", d)
+	}
+
+	// a new email moves the organizer, not the group
+	exec(t, s, `UPDATE Users SET Email = 'sid@berkeley.edu' WHERE Username = 'sid'`)
+	if _, body, _ := sid.get(school + "/edit"); !strings.Contains(body, "(sfsu.edu)") {
+		t.Errorf("edit form should name the group's school: %s", body)
+	}
+	form := url.Values{"name": {"SFSU only"}, "short": {"we study"}, "mode": {modeSchool}}
+	if code, _, _ := sid.post(school+"/edit", form); code != http.StatusSeeOther || domain() != "sfsu.edu" {
+		t.Errorf("edit school group: %d, domain %q", code, domain())
+	}
+	exec(t, s, `UPDATE Users SET Email = 'sid@gmail.com' WHERE Username = 'sid'`)
+	if code, body, _ := sid.post(school+"/edit", form); code != http.StatusSeeOther {
+		t.Errorf("edit school group without an .edu email: %d %s", code, body)
+	}
+	form.Set("mode", modeOpen)
+	if code, _, _ := sid.post(school+"/edit", form); code != http.StatusSeeOther || domain() != "" {
+		t.Errorf("open the school group: %d, domain %q", code, domain())
 	}
 }
 

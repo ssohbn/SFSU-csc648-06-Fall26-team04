@@ -100,7 +100,8 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("/", a.notFound)
 
 	// browsers mark cross-site form posts, so this blocks csrf without tokens
-	return a.withUser(http.NewCrossOriginProtection().Handler(mux))
+	// every form here is a few kilobytes, so stop reading a body past 1 MiB
+	return http.MaxBytesHandler(a.withUser(http.NewCrossOriginProtection().Handler(mux)), 1<<20)
 }
 
 // view is what the shared layout needs; every page's data embeds it.
