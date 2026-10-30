@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: app/go.mod
+          cache-dependency-path: app/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t studysync .
+      - name: smoke test
+        run: |
+          docker run -d --name studysync -p 6767:6767 studysync -seed
+          curl -fsS --retry 30 --retry-all-errors --retry-delay 1 http://localhost:6767/up
+          curl -fsS http://localhost:6767/ | grep -q "Calc II Problem Nights"
+      - if: failure()
+        run: docker logs studysync
