@@ -1,0 +1,26 @@
+{{define "content"}}
+<div class="wrap">
+	<header class="page-head page-head-row">
+		<div>
+			<h1>My groups</h1>
+			<p class="lead">Groups you run or joined.</p>
+		</div>
+		<a class="button" href="/groups/new">Start a group</a>
+	</header>
+	{{template "flash" .}}
+
+	<section aria-labelledby="my-groups-heading">
+		<h2 id="my-groups-heading" class="visually-hidden">Your groups</h2>
+		{{with .Groups}}
+		<ol class="cards">
+			{{range .}}{{template "card" .}}{{end}}
+		</ol>
+		{{else}}
+		<div class="empty">
+			<p class="empty-title">You're not in any groups yet.</p>
+			<p class="hint"><a href="/">Find one</a> or start your own.</p>
+		</div>
+		{{end}}
+	</section>
+</div>
+{{end}}

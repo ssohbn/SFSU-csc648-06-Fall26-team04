@@ -1,0 +1,119 @@
+{{define "content"}}
+<div class="wrap">
+	{{if .Group.ID}}
+	<a class="back-link" href="/groups/{{.Group.ID}}">Back to the group</a>
+	{{else}}
+	<a class="back-link" href="/">All groups</a>
+	{{end}}
+
+	<header class="page-head">
+		<h1>{{if .Group.ID}}Edit group{{else}}Start a study group{{end}}</h1>
+		<p class="lead">Say what you study, where you meet and who can join.</p>
+	</header>
+	{{template "flash" .}}
+
+	<form class="form" method="post" action="{{if .Group.ID}}/groups/{{.Group.ID}}/edit{{else}}/groups/new{{end}}">
+		<div class="form-columns">
+			<section class="panel form-panel" aria-labelledby="basics-heading">
+				<h2 id="basics-heading">The basics</h2>
+
+				<div class="field">
+					<label for="name">Name</label>
+					<input id="name" name="name" value="{{.Group.Name}}" required minlength="3" maxlength="80">
+				</div>
+
+				<div class="field">
+					<label for="short">Short description</label>
+					<input id="short" name="short" value="{{.Group.ShortDescription}}" required maxlength="140"
+						aria-describedby="short-hint">
+					<p class="hint" id="short-hint">Shown in search results.</p>
+				</div>
+
+				<div class="field">
+					<label for="long">Long description <span class="optional">(optional)</span></label>
+					<textarea id="long" name="long" rows="5" maxlength="2000">{{.Group.LongDescription}}</textarea>
+				</div>
+
+				<fieldset class="field">
+					<legend>Topics</legend>
+					{{with .Topics}}
+					<div class="tiles tiles-sm">
+						{{range .}}
+						<label class="tile"><input class="visually-hidden" type="checkbox" name="topic" value="{{.Name}}"{{if .Checked}} checked{{end}}>{{.Name}}</label>
+						{{end}}
+					</div>
+					{{end}}
+					<label for="topics">{{if .Topics}}New topics{{else}}Add topics{{end}}</label>
+					<input id="topics" name="topics" value="{{.Other}}" maxlength="400" placeholder="calculus, finals"
+						aria-describedby="topics-hint">
+					<p class="hint" id="topics-hint">Up to 8 topics in all. Separate new ones with commas.</p>
+				</fieldset>
+			</section>
+
+			<section class="panel form-panel" aria-labelledby="where-heading">
+				<h2 id="where-heading">Where and when</h2>
+
+				<div class="field">
+					<label for="place">Where you meet <span class="optional">(optional)</span></label>
+					<input id="place" name="place" value="{{.Group.MeetingPlace}}" maxlength="120"
+						placeholder="J. Paul Leonard Library, 2nd floor">
+				</div>
+
+				<!-- map.js shows the picker and fills in lat and lng -->
+				<input type="hidden" id="lat" name="lat" value="{{with .Group.Pin}}{{.Lat}}{{end}}">
+				<input type="hidden" id="lng" name="lng" value="{{with .Group.Pin}}{{.Lng}}{{end}}">
+				<div class="map-section pin-picker" hidden>
+					<div id="pin-map" class="map map-small" role="region" aria-label="Map for pinning where you meet"></div>
+					<p class="hint" id="pin-status" aria-live="polite"></p>
+					<div class="inline-actions">
+						<button class="small secondary" type="button" id="pin-center">Pin the map center</button>
+						<button class="small secondary" type="button" id="pin-clear">Remove pin</button>
+					</div>
+				</div>
+
+				<div class="field">
+					<label for="time">When you meet <span class="optional">(optional)</span></label>
+					<input id="time" name="time" value="{{.Group.MeetingTime}}" maxlength="80" placeholder="Fridays, 1 pm">
+				</div>
+			</section>
+		</div>
+
+		<section class="panel">
+			<fieldset class="choices">
+				<legend>Who can join</legend>
+				<div class="choice-list">
+					{{range .Modes}}
+					<label class="tile choice" data-mode="{{.Value}}">
+						<input class="visually-hidden" type="radio" name="mode" value="{{.Value}}" required {{if eq .Value $.Group.Mode}}checked{{end}}>
+						<strong>{{.Label}}{{if eq .Value "SCHOOL"}}{{with $.School}} ({{.}}){{end}}{{end}}</strong>
+						<span class="hint">{{.Help}}{{if and (eq .Value "SCHOOL") (not $.School)}} Needs a .edu email on
+							your profile.{{end}}</span>
+					</label>
+					{{end}}
+				</div>
+			</fieldset>
+		</section>
+
+		<div class="form-actions">
+			<button type="submit">{{if .Group.ID}}Save group{{else}}Create group{{end}}</button>
+			<a class="button secondary" href="{{if .Group.ID}}/groups/{{.Group.ID}}{{else}}/{{end}}">Cancel</a>
+		</div>
+	</form>
+
+	{{if .Group.ID}}
+	<section class="panel danger-zone" aria-labelledby="delete-heading">
+		<h2 id="delete-heading">Delete group</h2>
+
+		<form class="form" method="post" action="/groups/{{.Group.ID}}/delete">
+			<label class="check">
+				<input type="checkbox" name="confirm" value="yes" required>
+				<span>Delete &ldquo;{{.Group.Name}}&rdquo; and remove all its members. This can't be undone.</span>
+			</label>
+			<div>
+				<button class="danger" type="submit">Delete group</button>
+			</div>
+		</form>
+	</section>
+	{{end}}
+</div>
+{{end}}

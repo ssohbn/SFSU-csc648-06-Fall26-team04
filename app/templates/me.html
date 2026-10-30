@@ -1,0 +1,51 @@
+{{define "content"}}
+<div class="wrap">
+	<header class="page-head profile-head">
+		<span class="avatar avatar-lg" aria-hidden="true">{{slice .User.Username 0 1}}</span>
+		<div>
+			<h1>{{.User.Username}}</h1>
+			<p class="lead">Your account and the interests used to match you with groups.</p>
+		</div>
+	</header>
+	{{template "flash" .}}
+
+	<div class="two-col">
+		<section class="panel" aria-labelledby="interests-heading">
+			<h2 id="interests-heading">Your interests</h2>
+
+			{{with .Interests}}
+			<ul class="chips">
+				{{range .}}<li>{{.Name}}</li>{{end}}
+			</ul>
+			{{else}}
+			<p class="hint">You haven't added any interests yet.</p>
+			{{end}}
+
+			<p class="panel-foot"><a class="button secondary" href="/interests/">{{if .Interests}}Edit interests{{else}}Add interests{{end}}</a></p>
+		</section>
+
+		<section class="panel" aria-labelledby="profile-heading">
+			<h2 id="profile-heading">Profile</h2>
+
+			<form class="form" method="post" action="/me">
+				<div class="field">
+					<label for="email">Email</label>
+					<input id="email" type="email" name="email" value="{{.Email}}" required maxlength="254"
+						autocomplete="email" aria-describedby="email-hint">
+					<p class="hint" id="email-hint">{{with .School}}You can see and start {{.}} school groups.{{else}}Use a
+						school (.edu) email to see and start school groups.{{end}}</p>
+				</div>
+
+				<div class="field">
+					<label for="bio">Bio <span class="optional">(optional)</span></label>
+					<textarea id="bio" name="bio" rows="4" maxlength="500">{{.Bio}}</textarea>
+				</div>
+
+				<div>
+					<button type="submit">Save profile</button>
+				</div>
+			</form>
+		</section>
+	</div>
+</div>
+{{end}}
