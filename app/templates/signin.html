@@ -1,0 +1,24 @@
+{{define "content"}}
+<header>
+	<h1>Sign In</h1>
+	<p class="subtitle">Welcome back. Sign in to join groups and manage your own.</p>
+</header>
+
+<section class="panel narrow" aria-labelledby="signin-heading">
+	<h2 id="signin-heading">Your account</h2>
+
+	<form class="form" method="post" action="/signin">
+		<input type="hidden" name="next" value="{{.Next}}">
+
+		<label for="login">Username or email</label>
+		<input id="login" name="login" value="{{.Login}}" required autocomplete="username">
+
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" required autocomplete="current-password">
+
+		<button type="submit">Sign in</button>
+	</form>
+
+	<p>New here? <a href="/signup{{with .Next}}?next={{.}}{{end}}">Create a free account</a></p>
+</section>
+{{end}}

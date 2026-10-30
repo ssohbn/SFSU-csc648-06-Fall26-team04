@@ -1,0 +1,32 @@
+{{define "content"}}
+<header>
+	<h1>Sign Up</h1>
+	<p class="subtitle">A free account lets you join and start study groups.</p>
+</header>
+
+<section class="panel narrow" aria-labelledby="signup-heading">
+	<h2 id="signup-heading">Create your account</h2>
+
+	<form class="form" method="post" action="/signup">
+		<input type="hidden" name="next" value="{{.Next}}">
+
+		<label for="username">Username</label>
+		<input id="username" name="username" value="{{.Username}}" required minlength="3" maxlength="30"
+			autocomplete="username">
+		<p class="hint">3 to 30 letters, numbers, dots, dashes or underscores.</p>
+
+		<label for="email">Email</label>
+		<input id="email" type="email" name="email" value="{{.Email}}" required maxlength="254" autocomplete="email">
+
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" required minlength="8" autocomplete="new-password">
+
+		<label for="confirm">Confirm password</label>
+		<input id="confirm" type="password" name="confirm" required minlength="8" autocomplete="new-password">
+
+		<button type="submit">Create account</button>
+	</form>
+
+	<p>Already have an account? <a href="/signin{{with .Next}}?next={{.}}{{end}}">Sign in</a></p>
+</section>
+{{end}}

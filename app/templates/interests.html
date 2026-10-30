@@ -16,6 +16,10 @@
 			autocomplete="off">
 		<button type="submit">Search</button>
 	</form>
+
+	{{if not .User}}
+	<p class="hint"><a href="/signin?next=/interests/">Sign in</a> to add interests to your profile.</p>
+	{{end}}
 </section>
 
 <section class="results-section" aria-labelledby="interest-results-heading">
@@ -26,6 +30,8 @@
 			<thead>
 				<tr>
 					<th scope="col">Interest</th>
+					<th scope="col">People</th>
+					{{if .User}}<th scope="col"><span class="visually-hidden">Your profile</span></th>{{end}}
 				</tr>
 			</thead>
 			<tbody id="interest-results">
@@ -40,10 +46,33 @@
 {{range .Interests}}
 <tr>
 	<td>{{.Name}}</td>
+	<td>{{.People}}</td>
+	{{if $.User}}
+	<td class="actions">
+		<form class="inline" method="post" action="/interests/{{.ID}}/{{if .Mine}}remove{{else}}add{{end}}">
+			<input type="hidden" name="next" value="{{$.Back}}">
+			{{if .Mine}}
+			<button class="small secondary" type="submit">Remove</button>
+			{{else}}
+			<button class="small" type="submit">Add</button>
+			{{end}}
+		</form>
+	</td>
+	{{end}}
 </tr>
 {{else}}
 <tr>
-	<td>No interests found.</td>
+	<td colspan="3">No interests found.</td>
+</tr>
+{{end}}
+{{with .NewName}}
+<tr>
+	<td colspan="3">
+		<form class="inline" method="post" action="/interests/">
+			<input type="hidden" name="name" value="{{.}}">
+			<button class="small" type="submit">Create &ldquo;{{.}}&rdquo;</button>
+		</form>
+	</td>
 </tr>
 {{end}}
 {{end}}

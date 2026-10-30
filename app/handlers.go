@@ -2,13 +2,21 @@ package main
 
 import (
 	"bytes"
+	"cmp"
+	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"path"
+	"slices"
+	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 //go:embed templates static
@@ -58,22 +66,46 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /{$}", a.home)
 	mux.HandleFunc("GET /about/", a.about)
 	mux.HandleFunc("GET /interests/", a.interests)
+	mux.HandleFunc("POST /interests/", a.createInterest)
+	mux.HandleFunc("POST /interests/{id}/add", a.changeInterest(a.store.addUserInterest))
+	mux.HandleFunc("POST /interests/{id}/remove", a.changeInterest(a.store.removeUserInterest))
+	mux.HandleFunc("GET /signup", a.signup)
+	mux.HandleFunc("POST /signup", a.signup)
+	mux.HandleFunc("GET /signin", a.signin)
+	mux.HandleFunc("POST /signin", a.signin)
+	mux.HandleFunc("POST /signout", a.signout)
+	mux.HandleFunc("GET /me", a.profile)
+	mux.HandleFunc("POST /me", a.profile)
 	mux.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 	mux.HandleFunc("/", a.notFound)
-	return mux
+
+	// browsers mark cross-site form posts, so this blocks csrf without tokens
+	return a.withUser(http.NewCrossOriginProtection().Handler(mux))
 }
 
 // view is what the shared layout needs; every page's data embeds it.
 type view struct {
-	Title string
-	Path  string
+	Title  string
+	Path   string
+	User   *User
+	Notice string
+	Error  string
+}
+
+// notices are picked by ?ok= from a fixed list, so a link can't put its own
+// text on the page.
+var notices = map[string]string{
+	"welcome":   "Your account is ready. Add a few interests so groups can find you.",
+	"signedout": "You're signed out.",
+	"saved":     "Profile saved.",
+	"interest":  "Added to your interests.",
 }
 
 func newView(r *http.Request, title string) view {
-	return view{Title: title, Path: r.URL.Path}
+	return view{Title: title, Path: r.URL.Path, User: currentUser(r), Notice: notices[r.URL.Query().Get("ok")]}
 }
 
 func isHTMXRequest(r *http.Request) bool {
@@ -139,8 +171,15 @@ func (a *app) about(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) interests(w http.ResponseWriter, r *http.Request) {
-	query := r.FormValue("query")
-	interests, err := a.store.searchInterests(r.Context(), query)
+	a.renderInterests(w, r, http.StatusOK, r.FormValue("query"), "")
+}
+
+func (a *app) renderInterests(w http.ResponseWriter, r *http.Request, status int, query, errMsg string) {
+	var userID int64
+	if user := currentUser(r); user != nil {
+		userID = user.ID
+	}
+	interests, err := a.store.searchInterests(r.Context(), query, userID)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -150,12 +189,119 @@ func (a *app) interests(w http.ResponseWriter, r *http.Request) {
 		view
 		Query     string
 		Interests []Interest
+		Back      string // where add and remove return to
+		NewName   string // offered as a new interest when nothing matches exactly
+	}
+	v := interestsView{view: newView(r, "Interests"), Query: query, Interests: interests, Back: "/interests/"}
+	v.Error = errMsg
+	if query != "" {
+		v.Back += "?query=" + url.QueryEscape(query)
+	}
+	name := cleanName(query)
+	if userID != 0 && validInterestName(name) && !slices.ContainsFunc(interests, func(i Interest) bool { return strings.EqualFold(i.Name, name) }) {
+		v.NewName = name
 	}
 
-	name := "base"
+	page := "base"
 	if isHTMXRequest(r) {
-		name = "interest-rows"
+		page = "interest-rows"
 	}
 	w.Header().Add("Vary", "HX-Request")
-	a.render(w, http.StatusOK, "interests.html", name, interestsView{view: newView(r, "Interests"), Query: query, Interests: interests})
+	a.render(w, status, "interests.html", page, v)
+}
+
+// cleanName trims and collapses spaces, so "  Linear   Algebra " and
+// "Linear Algebra" are the same interest.
+func cleanName(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
+
+func validInterestName(name string) bool {
+	n := utf8.RuneCountInString(name)
+	return n >= 2 && n <= 40
+}
+
+func (a *app) createInterest(w http.ResponseWriter, r *http.Request) {
+	user, ok := requireUser(w, r, "/interests/")
+	if !ok {
+		return
+	}
+	name := cleanName(r.PostFormValue("name"))
+	if !validInterestName(name) {
+		a.renderInterests(w, r, http.StatusUnprocessableEntity, name, "Interest names are 2 to 40 characters.")
+		return
+	}
+	if err := a.store.createUserInterest(r.Context(), user.ID, name); err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/interests/?ok=interest&query="+url.QueryEscape(name), http.StatusSeeOther)
+}
+
+// changeInterest adds or removes one of the signed-in user's interests, then
+// goes back to the page the button was on.
+func (a *app) changeInterest(change func(ctx context.Context, userID, interestID int64) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		next := cmp.Or(safeNext(r.PostFormValue("next")), "/interests/")
+		user, ok := requireUser(w, r, next)
+		if !ok {
+			return
+		}
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil {
+			a.notFound(w, r)
+			return
+		}
+		if err := change(r.Context(), user.ID, id); err != nil {
+			a.serverError(w, r, err)
+			return
+		}
+		http.Redirect(w, r, next, http.StatusSeeOther)
+	}
+}
+
+func (a *app) profile(w http.ResponseWriter, r *http.Request) {
+	user, ok := requireUser(w, r, "/me")
+	if !ok {
+		return
+	}
+	type profileView struct {
+		view
+		Email, Bio string
+		Interests  []Interest
+	}
+	v := profileView{view: newView(r, "Your profile"), Email: user.Email, Bio: user.Bio}
+	status := http.StatusOK
+
+	if r.Method == http.MethodPost {
+		v.Email, v.Bio = strings.TrimSpace(r.PostFormValue("email")), strings.TrimSpace(r.PostFormValue("bio"))
+		email, emailOK := cleanEmail(v.Email)
+		switch {
+		case !emailOK:
+			v.Error = "Enter a valid email address."
+		case utf8.RuneCountInString(v.Bio) > 500:
+			v.Error = "Keep your bio to 500 characters."
+		default:
+			err := a.store.updateProfile(r.Context(), user.ID, email, v.Bio)
+			if errors.Is(err, errEmailTaken) {
+				v.Error = "Another account already uses that email."
+				break
+			}
+			if err != nil {
+				a.serverError(w, r, err)
+				return
+			}
+			http.Redirect(w, r, "/me?ok=saved", http.StatusSeeOther)
+			return
+		}
+		status = http.StatusUnprocessableEntity
+	}
+
+	interests, err := a.store.userInterests(r.Context(), user.ID)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+	v.Interests = interests
+	a.render(w, status, "me.html", "base", v)
 }

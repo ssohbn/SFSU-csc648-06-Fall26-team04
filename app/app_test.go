@@ -3,7 +3,9 @@ package main
 import (
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -44,6 +46,70 @@ func get(t *testing.T, url string, header ...string) (int, string) {
 		t.Fatal(err)
 	}
 	return resp.StatusCode, string(body)
+}
+
+// client is a browser stand-in: it keeps cookies and stops at redirects so
+// tests can check where they point.
+type client struct {
+	t    *testing.T
+	base string
+	http *http.Client
+}
+
+func newClient(t *testing.T, srv *httptest.Server) *client {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &client{t: t, base: srv.URL, http: &http.Client{
+		Jar:           jar,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}}
+}
+
+// do returns the status, body and redirect target of one request.
+func (c *client) do(req *http.Request) (int, string, string) {
+	c.t.Helper()
+	resp, err := c.http.Do(req)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	return resp.StatusCode, string(body), resp.Header.Get("Location")
+}
+
+func (c *client) get(path string) (int, string, string) {
+	c.t.Helper()
+	req, err := http.NewRequest(http.MethodGet, c.base+path, nil)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	return c.do(req)
+}
+
+func (c *client) post(path string, form url.Values) (int, string, string) {
+	c.t.Helper()
+	req, err := http.NewRequest(http.MethodPost, c.base+path, strings.NewReader(form.Encode()))
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	return c.do(req)
+}
+
+// signup creates an account and leaves the client signed in.
+func (c *client) signup(username, email string) {
+	c.t.Helper()
+	code, body, _ := c.post("/signup", url.Values{
+		"username": {username}, "email": {email}, "password": {"correct horse"}, "confirm": {"correct horse"},
+	})
+	if code != http.StatusSeeOther {
+		c.t.Fatalf("signup %s: %d %s", username, code, body)
+	}
 }
 
 func exec(t *testing.T, s *store, query string, args ...any) {

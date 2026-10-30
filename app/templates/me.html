@@ -1,0 +1,42 @@
+{{define "content"}}
+<header>
+	<h1>{{.User.Username}}</h1>
+	<p class="subtitle">Your account and the interests used to match you with groups.</p>
+</header>
+
+<section class="panel narrow" aria-labelledby="interests-heading">
+	<h2 id="interests-heading">Your interests</h2>
+
+	{{if .Interests}}
+	<ul class="chips">
+		{{range .Interests}}
+		<li>
+			{{.Name}}
+			<form class="inline" method="post" action="/interests/{{.ID}}/remove">
+				<input type="hidden" name="next" value="/me">
+				<button class="chip-remove" type="submit" aria-label="Remove {{.Name}}">&times;</button>
+			</form>
+		</li>
+		{{end}}
+	</ul>
+	{{else}}
+	<p>You haven't added any interests yet.</p>
+	{{end}}
+
+	<p><a class="button secondary" href="/interests/">Find interests</a></p>
+</section>
+
+<section class="panel narrow" aria-labelledby="profile-heading">
+	<h2 id="profile-heading">Profile</h2>
+
+	<form class="form" method="post" action="/me">
+		<label for="email">Email</label>
+		<input id="email" type="email" name="email" value="{{.Email}}" required maxlength="254" autocomplete="email">
+
+		<label for="bio">Bio</label>
+		<textarea id="bio" name="bio" rows="4" maxlength="500">{{.Bio}}</textarea>
+
+		<button type="submit">Save profile</button>
+	</form>
+</section>
+{{end}}

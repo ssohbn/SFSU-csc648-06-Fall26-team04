@@ -102,8 +102,9 @@ summary:focus-visible {
     text-decoration: none;
 }
 
-.site-header nav a:hover,
-.site-header nav a[aria-current="page"] {
+.site-header nav a:not(.button):hover,
+.site-header nav a[aria-current="page"],
+.link-button:hover {
     text-decoration: underline;
     text-decoration-color: var(--accent);
     text-decoration-thickness: 2px;
@@ -347,6 +348,118 @@ button.secondary,
 button.secondary:hover,
 .button.secondary:hover {
     background-color: var(--hover);
+}
+
+button.small,
+.button.small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+/* A form button that reads like a nav link, used for sign out */
+.link-button,
+.link-button:hover,
+.link-button:active {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    transform: none;
+    padding: 0;
+    font-weight: normal;
+    font-size: inherit;
+    color: var(--ink);
+}
+
+/* Forms */
+.inline {
+    display: inline;
+    margin: 0;
+}
+
+.form {
+    display: grid;
+    gap: 6px;
+}
+
+.form label {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.form button {
+    justify-self: start;
+    margin-top: 18px;
+}
+
+.hint {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+}
+
+.search-section .hint {
+    margin-top: 14px;
+}
+
+/* Notices at the top of a page */
+.notice,
+.error {
+    max-width: 650px;
+    margin: 0 auto 28px;
+    padding: 12px 16px;
+    background-color: var(--surface);
+    border: 1px solid var(--ink);
+    border-left-width: 6px;
+    box-shadow: 3px 3px 0 #d5caba;
+}
+
+.notice {
+    border-left-color: #4f7d5a;
+}
+
+.error {
+    border-left-color: #b4442f;
+}
+
+/* Interest chips on the profile */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+}
+
+.chips li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--field);
+    border: 1px solid var(--line);
+    padding: 4px 4px 4px 12px;
+}
+
+.chip-remove,
+.chip-remove:hover,
+.chip-remove:active {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    transform: none;
+    padding: 0 8px;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--muted);
+}
+
+.chip-remove:hover {
+    color: var(--ink);
+}
+
+td.actions {
+    text-align: right;
+    white-space: nowrap;
 }
 
 .visually-hidden {

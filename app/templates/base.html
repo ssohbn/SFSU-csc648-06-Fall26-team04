@@ -24,6 +24,8 @@
 	{{template "header" .}}
 
 	<main class="page">
+		{{with .Notice}}<p class="notice" role="status">{{.}}</p>{{end}}
+		{{with .Error}}<p class="error" role="alert">{{.}}</p>{{end}}
 		{{template "content" .}}
 	</main>
 
@@ -40,6 +42,17 @@
 		<ul>
 			<li><a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>search groups</a></li>
 			<li><a href="/interests/" {{if eq .Path "/interests/"}}aria-current="page"{{end}}>interests</a></li>
+			{{with .User}}
+			<li><a href="/me" {{if eq $.Path "/me"}}aria-current="page"{{end}}>{{.Username}}</a></li>
+			<li>
+				<form class="inline" method="post" action="/signout">
+					<button class="link-button" type="submit">sign out</button>
+				</form>
+			</li>
+			{{else}}
+			<li><a href="/signin" {{if eq .Path "/signin"}}aria-current="page"{{end}}>sign in</a></li>
+			<li><a class="button" href="/signup">sign up</a></li>
+			{{end}}
 		</ul>
 	</nav>
 </header>
