@@ -1,0 +1,11 @@
+CREATE TABLE StudyGroups (
+    Id INTEGER PRIMARY KEY,
+    Name TEXT NOT NULL,
+    ShortDescription TEXT NOT NULL,
+    LongDescription TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE Interests (
+    Id INTEGER PRIMARY KEY,
+    Name TEXT NOT NULL UNIQUE COLLATE NOCASE
+);
