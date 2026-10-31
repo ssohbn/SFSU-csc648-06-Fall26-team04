@@ -45,6 +45,7 @@ is in ``config/deploy.yml``.
 ```
 gem install kamal
 export KAMAL_HOST=<server ip>
+export KAMAL_SSH_USER=root   # optional, the default is student
 kamal setup     # first time, also starts kamal-proxy
 kamal deploy    # after that
 kamal app logs  # the first boot prints the demo account password
@@ -53,9 +54,10 @@ kamal app logs  # the first boot prints the demo account password
 - ``kamal setup`` installs docker on the server if the ssh user is root or has
   passwordless sudo. otherwise someone with sudo has to install docker there
   and run ``sudo usermod -aG docker student``.
-- caddy on the server keeps ports 80 and 443 and forwards to
-  ``127.0.0.1:6767``, where kamal-proxy listens. stop anything else on that
-  port (like an old ``go run``) before ``kamal setup``.
+- kamal-proxy takes ports 80 and 443 and gets a let's encrypt cert for each
+  host in ``proxy.host``. the dns records have to point straight at the server
+  (dns only in cloudflare, not proxied) or the cert check fails. stop anything
+  else on those ports before ``kamal setup``.
 - kamal deploys the last commit, not uncommitted changes.
 - the image is built for amd64, change ``builder.arch`` if the server is arm64.
 
