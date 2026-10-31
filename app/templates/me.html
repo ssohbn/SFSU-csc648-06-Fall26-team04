@@ -21,6 +21,20 @@
 			<p class="hint">You haven't added any interests yet.</p>
 			{{end}}
 
+			{{with .Suggested}}
+			<h3 id="suggested-heading">Suggested for you</h3>
+			<ul class="tiles" aria-labelledby="suggested-heading">
+				{{range .}}
+				<li>
+					<form method="post" action="/interests/{{.ID}}/add">
+						<input type="hidden" name="next" value="/me?ok=interest">
+						<button class="tile" type="submit"><span class="visually-hidden">Add </span>{{.Name}}</button>
+					</form>
+				</li>
+				{{end}}
+			</ul>
+			{{end}}
+
 			<p class="panel-foot"><a class="button secondary" href="/interests/">{{if .Interests}}Edit interests{{else}}Add interests{{end}}</a></p>
 		</section>
 

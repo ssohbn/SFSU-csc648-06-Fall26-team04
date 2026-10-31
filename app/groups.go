@@ -118,6 +118,36 @@ func hasTopic(g StudyGroup, ids map[int64]bool) bool {
 	return slices.ContainsFunc(g.Interests, func(i Interest) bool { return ids[i.ID] })
 }
 
+// suggestInterests ranks the topics that share a group with one of mine by
+// how many groups they share. groups should be visibleGroups, so a hidden
+// group never shapes what someone is offered.
+func suggestInterests(groups []StudyGroup, mine []Interest) []Interest {
+	have := map[int64]bool{}
+	for _, i := range mine {
+		have[i.ID] = true
+	}
+	count := map[int64]int{}
+	var out []Interest
+	for _, g := range groups {
+		if !hasTopic(g, have) {
+			continue
+		}
+		for _, t := range g.Interests {
+			if have[t.ID] {
+				continue
+			}
+			if count[t.ID] == 0 {
+				out = append(out, t)
+			}
+			count[t.ID]++
+		}
+	}
+	slices.SortFunc(out, func(x, y Interest) int {
+		return cmp.Or(count[y.ID]-count[x.ID], strings.Compare(strings.ToLower(x.Name), strings.ToLower(y.Name)))
+	})
+	return out[:min(len(out), 6)]
+}
+
 // loadGroup finds the group in the URL and what the viewer brings to it. If
 // the viewer can't see the group, it answers the request and returns false.
 func (a *app) loadGroup(w http.ResponseWriter, r *http.Request, invite string) (StudyGroup, access, bool) {

@@ -375,6 +375,45 @@ func TestGroupForm(t *testing.T) {
 	}
 }
 
+func TestSuggestedInterests(t *testing.T) {
+	srv, s := newTestServer(t)
+	olive := newClient(t, srv)
+	olive.signup("olive", "olive@gmail.com")
+	olive.createGroup(url.Values{"name": {"Calc Club"}, "topics": {"Calculus, Physics"}})
+	olive.createGroup(url.Values{"name": {"Math Club"}, "topics": {"Calculus, Physics, Statistics"}})
+	olive.createGroup(url.Values{"name": {"Secret Club"}, "topics": {"Calculus, Cryptography"}, "mode": {modeInvite}})
+	olive.createGroup(url.Values{"name": {"Art Club"}, "topics": {"Drawing"}})
+	gus := newClient(t, srv)
+	gus.signup("gus", "gus@gmail.com")
+	gus.post("/interests/", url.Values{"name": {"calculus"}})
+
+	_, body, _ := gus.get("/me")
+	physics, stats := strings.Index(body, "Add </span>Physics"), strings.Index(body, "Add </span>Statistics")
+	if physics < 0 || stats < physics {
+		t.Errorf("want physics then statistics suggested: %s", body)
+	}
+	for _, hidden := range []string{"Calculus", "Cryptography", "Drawing"} {
+		if strings.Contains(body, "Add </span>"+hidden) {
+			t.Errorf("%s suggested: %s", hidden, body)
+		}
+	}
+
+	var physicsID string
+	if err := s.db.QueryRow(`SELECT Id FROM Interests WHERE Name = 'physics'`).Scan(&physicsID); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, loc := gus.post("/interests/"+physicsID+"/add", url.Values{"next": {"/me?ok=interest"}}); code != http.StatusSeeOther || loc != "/me?ok=interest" {
+		t.Fatalf("add suggestion: %d %q", code, loc)
+	}
+	if _, body, _ := gus.get("/me?ok=interest"); !strings.Contains(body, "Added to your interests.") ||
+		strings.Contains(body, "Add </span>Physics") || !strings.Contains(body, "Add </span>Statistics") {
+		t.Errorf("after adding physics: %s", body)
+	}
+	if _, body, _ := olive.get("/me"); strings.Contains(body, "Suggested for you") {
+		t.Errorf("suggestions without interests: %s", body)
+	}
+}
+
 func TestHomeFilters(t *testing.T) {
 	srv, s := newTestServer(t)
 	olive := newClient(t, srv)
