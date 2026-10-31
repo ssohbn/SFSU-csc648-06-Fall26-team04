@@ -273,6 +273,7 @@ func (a *app) profile(w http.ResponseWriter, r *http.Request) {
 		Email, Bio string
 		School     string
 		Interests  []Interest
+		Suggested  []Interest
 	}
 	v := profileView{view: newView(r, "Your profile"), Email: user.Email, Bio: user.Bio, School: schoolDomain(user.Email)}
 	status := http.StatusOK
@@ -307,5 +308,11 @@ func (a *app) profile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v.Interests = interests
+	groups, err := a.visibleGroups(r)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+	v.Suggested = suggestInterests(groups, interests)
 	a.render(w, status, "me.html", "base", v)
 }

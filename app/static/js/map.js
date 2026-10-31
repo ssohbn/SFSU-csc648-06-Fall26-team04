@@ -45,6 +45,8 @@
 	const home = document.getElementById('groups-map');
 	if (home) {
 		const map = newMap(home);
+		// maplibre disables the button itself when location is blocked or missing
+		map.addControl(new maplibregl.GeolocateControl());
 		const section = home.closest('.map-section');
 		const results = document.getElementById('search-results');
 		const byCard = new Map();
@@ -106,6 +108,11 @@
 		// a click on the pin also reaches the map, which would move the pin to the pointer
 		marker.getElement().addEventListener('click', (e) => e.stopPropagation());
 		const empty = 'Click the map to pin where you meet.';
+		const locate = new maplibregl.GeolocateControl();
+		map.addControl(locate);
+		// the map moves without a word, so say what happened
+		locate.on('geolocate', () => { status.textContent = 'The map is centered on you. Pin the map center if you meet here.'; });
+		locate.on('error', () => { status.textContent = "Your location isn't available. Click the map instead."; });
 
 		const set = (at) => {
 			at = maplibregl.LngLat.convert(at).wrap();

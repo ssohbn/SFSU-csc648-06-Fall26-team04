@@ -10,7 +10,7 @@ servers:
     cmd: -seed
 
 ssh:
-  user: student
+  user: <%= ENV.fetch("KAMAL_SSH_USER", "student") %>
 
 # kamal runs this registry on your machine and the server pulls from it over ssh
 registry:
@@ -20,14 +20,9 @@ builder:
   arch: amd64
 
 proxy:
+  ssl: true
+  host: studysync.me,www.studysync.me
   app_port: 6767
-  # caddy on the server keeps ports 80 and 443 and forwards to 127.0.0.1:6767,
-  # so kamal-proxy only listens there and https stays caddy's job
-  run:
-    publish: false
-    options:
-      publish:
-        - 127.0.0.1:6767:80
 
 volumes:
   - studysync_data:/data
