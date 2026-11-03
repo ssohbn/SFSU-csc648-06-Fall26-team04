@@ -11,6 +11,7 @@
 		<p class="lead">Say what you study, where you meet and who can join.</p>
 	</header>
 	{{template "flash" .}}
+	{{if .Prefilled}}<p class="notice" role="status">Your matching details filled this draft. Review the topics, meeting time and who can join, then select Create group to publish it. Nothing has been created yet.</p>{{end}}
 
 	<form class="form" method="post" action="{{if .Group.ID}}/groups/{{.Group.ID}}/edit{{else}}/groups/new{{end}}">
 		<div class="form-columns">

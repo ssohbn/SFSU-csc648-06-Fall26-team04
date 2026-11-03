@@ -67,6 +67,37 @@ func matchingGroupsFixture(t *testing.T, a *app) {
 	exec(t, a.store, `INSERT INTO StudyGroupEnrollment VALUES (1, 7, 'USER')`)
 }
 
+func TestMatchingRelatedCoursesAndCreateAction(t *testing.T) {
+	for _, output := range []string{`{"matches":[]}`, `{"matches":[{"group_id":1,"score":80,"reason":"Related database topic, but CSC 675 differs from your course.","schedule_fit":"unknown"}]}`} {
+		t.Run(output, func(t *testing.T) {
+			m := newGeminiMatcher("test-secret", "")
+			m.client.Transport = matchingTransport(func(*http.Request) (*http.Response, error) { return matchingReply(output, "STOP"), nil })
+			c, a := matchingFixture(t, m)
+			matchingGroupsFixture(t, a)
+			code, body, _ := c.post("/matches", url.Values{"courses": {"CSC 667, CSC 415"}, "availability": {"Thursday 1pm-3pm"}})
+			if code != 200 || !strings.Contains(body, "No matching group for these details yet") || !strings.Contains(body, "Review &amp; create this group") || !strings.Contains(body, `name="availability" value="Thursday 1pm-3pm"`) || !strings.Contains(body, "CSC 667 study group") {
+				t.Fatal("no-match results must offer a draft using the submitted details")
+			}
+			if strings.Contains(output, `"group_id"`) {
+				start := strings.Index(body, "Related groups to explore")
+				link := strings.Index(body, `href="/groups/1"`)
+				if start < 0 || link < start || !strings.Contains(body, "do not list your requested course codes") {
+					t.Fatal("different course must be clearly separated from primary recommendations")
+				}
+			}
+		})
+	}
+}
+
+func TestCourseCodeBoundaries(t *testing.T) {
+	g := StudyGroup{Name: "CSC 667 web development", ShortDescription: "Not an operating systems course"}
+	for input, want := range map[string]bool{"csc667": true, "CSC-667, CSC 415": true, "CSC 66": false, "CSC 6670": false, "CSC 415": false} {
+		if got := sharesCourse(g, courseCodes(input)); got != want {
+			t.Errorf("course match %q = %v, want %v", input, got, want)
+		}
+	}
+}
+
 func TestMatchingHTTPFlow(t *testing.T) {
 	var calls int
 	m := newGeminiMatcher("test-server-secret", "")
@@ -187,7 +218,7 @@ func TestMatchingEmptyDisabledAndValidation(t *testing.T) {
 			}
 			c, _ := matchingFixture(t, m)
 			code, body, _ := c.post("/matches", url.Values{})
-			if enabled && (code != 200 || !strings.Contains(body, "No suitable matches found")) {
+			if enabled && (code != 200 || !strings.Contains(body, "No matching group for these details yet")) {
 				t.Errorf("empty groups: %d", code)
 			}
 			if !enabled && (code != 503 || !strings.Contains(body, "hasn't been enabled")) {
