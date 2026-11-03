@@ -1,11 +1,38 @@
 package main
 
 import (
+	"context"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
 )
+
+func TestGeminiLiveMatchingDemoScenario(t *testing.T) {
+	if os.Getenv("STUDYSYNC_GEMINI_LIVE") != "1" {
+		t.Skip("set STUDYSYNC_GEMINI_LIVE=1 for a real Gemini request")
+	}
+	m := newGeminiMatcher(os.Getenv("GEMINI_API_KEY"), os.Getenv("GEMINI_MODEL"))
+	if m == nil {
+		t.Fatal("GEMINI_API_KEY is required")
+	}
+	c, a := matchingFixture(t, m)
+	if err := seedMatchingDemo(context.Background(), a.store); err != nil {
+		t.Fatal(err)
+	}
+	code, body, _ := c.post("/matches", url.Values{
+		"courses": {"CSC 667, CSC 415"}, "availability": {"Thursday 1pm-3pm America/Los_Angeles"}, "preferences": {"Small groups, web application and operating systems practice"},
+	})
+	if code != 200 || (!strings.Contains(body, "Demo · CSC 667 Thursday web lab") && !strings.Contains(body, "Demo · CSC 415 Thursday")) || !strings.Contains(body, "Review &amp; create this group") {
+		t.Fatalf("screenshot scenario must recommend a relevant Thursday group and offer a creation draft; HTTP %d", code)
+	}
+	for _, conflict := range []string{"CSC 667 evening web workshop", "CSC 415 Friday systems circle"} {
+		if strings.Contains(body, conflict) {
+			t.Fatalf("explicit different-day conflict was suggested: %s", conflict)
+		}
+	}
+	t.Log("Real Gemini recommends Thursday CSC 667/415 demo groups and renders the prefilled creation action")
+}
 
 func TestGeminiLiveMatching(t *testing.T) {
 	if os.Getenv("STUDYSYNC_GEMINI_LIVE") != "1" {

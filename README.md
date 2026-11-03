@@ -75,6 +75,31 @@ and eligible group descriptions to Google Gemini. Form details are not saved.
 Email, username, invite codes, coordinates and other members' profiles are
 excluded. Only groups you can join are candidates; joined groups are excluded.
 
+Results link directly to each group's join page. Related subjects are listed
+separately when they do not mention your requested course codes. Known schedule
+conflicts are excluded. After searching, **Review & create this group** opens a
+draft filled with your courses, topics, availability and preferences. Review the
+form and select **Create group** to publish; opening a draft writes nothing.
+Your bio is never copied into the group. Availability longer than 80 characters
+goes in the description so you can choose a specific meeting time.
+
+For more test data, append 8 labelled demo profiles and 12 groups to your local
+database (repeat runs do not duplicate them):
+
+```sh
+cd app
+go run . -seed-matching-demo
+go run .
+```
+
+With Docker, use the same database volume and exit after seeding:
+`docker run --rm -v studysync_data:/data studysync -seed-matching-demo`.
+This is opt-in and does not reset existing accounts or groups. Demo profiles
+have random, undisclosed passwords and `.invalid` emails. Use your own account
+to test **CSC 667, CSC 415** with **Thursdays 1–3 pm America/Los_Angeles**, or
+**CSC 675** with **Thursdays 1–2 pm America/Los_Angeles**. An uncommon course
+also lets you test the prefilled creation flow.
+
 Set the key in the server environment without putting it in shell history:
 
 ```sh

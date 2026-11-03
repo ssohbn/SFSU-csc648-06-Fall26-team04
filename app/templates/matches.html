@@ -41,14 +41,43 @@
 					<p>{{.Reason}}</p>
 					<p class="meets">{{.MeetingPlace}}{{with .MeetingTime}} · {{.}}{{end}}</p>
 					<p class="hint">{{if eq .ScheduleFit "compatible"}}Schedule appears compatible; confirm with the organizer.{{else}}Schedule needs confirmation.{{end}}</p>
-					<div class="card-foot"><span>{{.ModeLabel}}</span><span class="member-count">{{.Members}} {{if eq .Members 1}}member{{else}}members{{end}}</span></div>
+					<div class="card-foot"><a class="button small" href="/groups/{{.ID}}">View &amp; join group</a><span class="member-count">{{.Members}} {{if eq .Members 1}}member{{else}}members{{end}}</span></div>
 				</li>
 				{{end}}
 			</ol>
 			{{else}}
-			<div class="empty"><p class="empty-title">No suitable matches found.</p><p class="hint">Try other courses or availability, update your interests, or <a href="/">browse all groups</a>.</p></div>
+			<div class="empty"><p class="empty-title">No matching group for these details yet.</p><p class="hint">Start one for your courses and schedule using the draft below. You can review everything before publishing.</p></div>
+			{{end}}
+			{{with .Alternatives}}
+			<h3>Related groups to explore</h3>
+			<p class="hint">These cover related topics, but do not list your requested course codes. Check the course and meeting time before joining.</p>
+			<ul class="cards">
+				{{range .}}<li class="card">
+					<h4 class="card-title"><a href="/groups/{{.ID}}">{{.Name}}</a></h4>
+					<p>{{.Reason}}</p>
+					<p class="meets">{{.MeetingPlace}}{{with .MeetingTime}} · {{.}}{{end}}</p>
+					<a class="button small secondary" href="/groups/{{.ID}}">Explore group</a>
+					<p class="hint">Schedule needs confirmation.</p>
+				</li>{{end}}
+			</ul>
 			{{end}}
 			{{else if not .Error}}<p class="hint">Fill in any details you want to include, then select Find my matches.</p>{{end}}
+			{{if .CanDraft}}
+			<section class="panel matching-draft" aria-labelledby="draft-heading">
+				<h3 id="draft-heading">{{if .Matches}}Want to start your own?{{else}}Create a group that fits you{{end}}</h3>
+				<p><strong>{{.Draft.Name}}</strong></p>
+				{{with .Draft.MeetingTime}}<p class="meets">{{.}}</p>{{else}}{{if .Availability}}<p class="hint">Your full availability will be included in the draft description. Choose a meeting time before publishing.</p>{{end}}{{end}}
+				{{with .Draft.Interests}}<ul class="chips">{{range .}}<li>{{.Name}}</li>{{end}}</ul>{{end}}
+				<p class="hint">Your courses, availability and study preferences will fill the form. Review and edit it before creating your group.</p>
+				<form method="post" action="/groups/new">
+					<input type="hidden" name="prefill" value="matching">
+					<input type="hidden" name="courses" value="{{.Courses}}">
+					<input type="hidden" name="availability" value="{{.Availability}}">
+					<input type="hidden" name="preferences" value="{{.Preferences}}">
+					<button type="submit">Review &amp; create this group</button>
+				</form>
+			</section>
+			{{end}}
 		</section>
 	</div>
 </div>
