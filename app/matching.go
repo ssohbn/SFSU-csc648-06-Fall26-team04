@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
@@ -146,7 +147,11 @@ func matchingBody(profile matchingProfile, groups []matchingCandidate) ([]byte, 
 func (m *geminiMatcher) rank(ctx context.Context, profile matchingProfile, groups []StudyGroup) ([]groupMatch, int, error) {
 	var candidates []matchingCandidate
 	var body []byte
+	allowed := map[int64]StudyGroup{}
 	for _, g := range groups {
+		if len(candidates) == 30 {
+			break
+		}
 		description := g.ShortDescription + " " + g.LongDescription
 		if runes := []rune(description); len(runes) > 500 {
 			description = string(runes[:500])
@@ -156,10 +161,11 @@ func (m *geminiMatcher) rank(ctx context.Context, profile matchingProfile, group
 		if err != nil {
 			return nil, 0, err
 		}
-		if len(trial) > maxMatchingRequest || len(candidates) == 30 {
-			break
+		if len(trial) > maxMatchingRequest {
+			continue
 		}
 		candidates = append(candidates, candidate)
+		allowed[g.ID] = g
 		body = trial
 	}
 	if len(candidates) == 0 {
@@ -223,10 +229,6 @@ func (m *geminiMatcher) rank(ctx context.Context, profile matchingProfile, group
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&result) != nil || decoder.Decode(new(any)) != io.EOF || result.Matches == nil || len(result.Matches) > 5 {
 		return nil, 0, errMatchingResponse
-	}
-	allowed := map[int64]StudyGroup{}
-	for _, g := range groups[:len(candidates)] {
-		allowed[g.ID] = g
 	}
 	seen := map[int64]bool{}
 	var matches []groupMatch
@@ -351,6 +353,23 @@ func (a *app) matches(w http.ResponseWriter, r *http.Request) {
 					}
 				} else {
 					// Permissions or group details may change while Gemini is running.
+					cookie, err := r.Cookie(sessionCookie)
+					if err != nil {
+						http.Redirect(w, r, "/signin?next=%2Fmatches", http.StatusSeeOther)
+						return
+					}
+					fresh, err := a.store.userBySession(r.Context(), hashToken(cookie.Value), time.Now())
+					if errors.Is(err, sql.ErrNoRows) {
+						http.Redirect(w, r, "/signin?next=%2Fmatches", http.StatusSeeOther)
+						return
+					}
+					if err != nil {
+						a.serverError(w, r, err)
+						return
+					}
+					user = &fresh
+					r = r.WithContext(context.WithValue(r.Context(), userKey{}, user))
+					v.User = user
 					interests, err = a.store.userInterests(r.Context(), user.ID)
 					if err != nil {
 						a.serverError(w, r, err)

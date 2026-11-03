@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -361,6 +362,32 @@ func TestMatchingRefreshesVisibility(t *testing.T) {
 	}
 }
 
+func TestMatchingRefreshesViewer(t *testing.T) {
+	for _, revoke := range []bool{false, true} {
+		t.Run(strconv.FormatBool(revoke), func(t *testing.T) {
+			m := newGeminiMatcher("key", "")
+			c, a := matchingFixture(t, m)
+			matchingGroupsFixture(t, a)
+			m.client.Transport = matchingTransport(func(*http.Request) (*http.Response, error) {
+				if revoke {
+					exec(t, a.store, `DELETE FROM Sessions`)
+				} else {
+					exec(t, a.store, `UPDATE Users SET Email='changed@other.edu' WHERE Id=1`)
+				}
+				return matchingReply(`{"matches":[{"group_id":8,"score":95,"reason":"School SQL is relevant.","schedule_fit":"unknown"}]}`, "STOP"), nil
+			})
+			code, body, next := c.post("/matches", url.Values{})
+			if revoke {
+				if code != 303 || next != "/signin?next=%2Fmatches" {
+					t.Errorf("revoked session still received results: %d %s", code, next)
+				}
+			} else if code != 200 || strings.Contains(body, `href="/groups/8"`) || strings.Contains(body, "School SQL is relevant.") {
+				t.Errorf("changed school email retained access: %d", code)
+			}
+		})
+	}
+}
+
 func TestMatchingTimeout(t *testing.T) {
 	m := newGeminiMatcher("key", "")
 	m.client.Timeout = 5 * time.Millisecond
@@ -372,4 +399,45 @@ func TestMatchingTimeout(t *testing.T) {
 		t.Errorf("timeout retained in-flight lock: %v", err)
 	}
 	m.release()
+}
+
+func TestMatchingSkipsOversizeCandidate(t *testing.T) {
+	form := url.Values{"name": {strings.Repeat("<", 80)}, "short": {strings.Repeat("<", 140)}, "long": {strings.Repeat("<", 2000)}, "place": {strings.Repeat("<", 120)}, "time": {strings.Repeat("<", 80)}, "mode": {"OPEN"}}
+	for i := 0; i < 8; i++ {
+		form.Add("topic", strings.Repeat("<", 38)+fmt.Sprintf("%02d", i))
+	}
+	r := httptest.NewRequest("POST", "/groups/new", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	large, topics, problem := readGroupForm(r, &User{ID: 1}, StudyGroup{ID: 1})
+	if problem != "" {
+		t.Fatal("probe group is invalid: " + problem)
+	}
+	for i, s := range topics {
+		large.Interests = append(large.Interests, Interest{ID: int64(i + 1), Name: s})
+	}
+	profile := matchingProfile{Bio: strings.Repeat("b", 500), Courses: strings.Repeat("c", 200), Availability: strings.Repeat("a", 300), Preferences: strings.Repeat("p", 300)}
+	for i := 0; i < 50; i++ {
+		profile.Interests = append(profile.Interests, fmt.Sprintf("interest%02d%030d", i, i))
+	}
+	small := StudyGroup{ID: 2, Name: "SQL study", ShortDescription: "Practice SQL", MeetingTime: "Thursday"}
+	bigBody, _ := matchingBody(profile, []matchingCandidate{{large.ID, large.Name, (large.ShortDescription + " " + large.LongDescription)[:500], topicNames(large), large.MeetingTime, large.MeetingPlace}})
+	smallBody, _ := matchingBody(profile, []matchingCandidate{{ID: 2, Name: small.Name, Description: small.ShortDescription + " ", MeetingTime: small.MeetingTime}})
+	t.Logf("valid group; first candidate request=%d bytes, later candidate request=%d bytes, cap=%d", len(bigBody), len(smallBody), maxMatchingRequest)
+	if len(bigBody) <= maxMatchingRequest || len(smallBody) > maxMatchingRequest {
+		t.Fatal("probe does not straddle request cap")
+	}
+	m := newGeminiMatcher("test-only-key", "")
+	m.client.Transport = matchingTransport(func(r *http.Request) (*http.Response, error) {
+		return matchingReply(`{"matches":[{"group_id":2,"score":90,"reason":"SQL is relevant.","schedule_fit":"unknown"}]}`, "STOP"), nil
+	})
+	matches, n, err := m.rank(context.Background(), profile, []StudyGroup{large, small})
+	if err != nil || n != 1 || len(matches) != 1 || matches[0].ID != small.ID {
+		t.Fatalf("a valid oversize group blocks later fitting candidate: compared=%d error=%v", n, err)
+	}
+	m.client.Transport = matchingTransport(func(*http.Request) (*http.Response, error) {
+		return matchingReply(`{"matches":[{"group_id":1,"score":90,"reason":"Not actually sent.","schedule_fit":"unknown"}]}`, "STOP"), nil
+	})
+	if _, _, err := m.rank(context.Background(), profile, []StudyGroup{large, small}); !errors.Is(err, errMatchingResponse) {
+		t.Error("accepted a skipped candidate ID")
+	}
 }
