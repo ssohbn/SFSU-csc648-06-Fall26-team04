@@ -1,0 +1,5 @@
+.git
+milestones
+**/*.sqlite3*
+app/tmp
+app/site

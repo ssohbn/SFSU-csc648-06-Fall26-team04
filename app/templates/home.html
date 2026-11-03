@@ -1,7 +1,82 @@
 {{define "content"}}
-<div>
-	<h1>welcome to our homepage</h1>
-	<p>you're looking for <a target="_blank" href="/static/">this</a></p>
-	<p>or maybe <a target="_blank" href="/studygroups">this</a></p>
+<div class="wrap home">
+	<section class="home-search" aria-labelledby="home-heading">
+		{{template "flash" .}}
+		<h1 id="home-heading">Find your group</h1>
+		<p class="lead">Browse study groups on the map, or search by name, topic or place.</p>
+
+		<!-- go reads the search text from "query" and the filters from "topic", "match" and "mine".
+			no "changed" in hx-trigger: htmx checks it with .value, which never changes on a checkbox -->
+		<form action="/" method="get" hx-get="/" hx-trigger="input delay:300ms, submit"
+			hx-target="#search-results" hx-swap="innerHTML" hx-sync="this:replace" hx-push-url="true">
+			<div class="search-row">
+				<label class="visually-hidden" for="group-query">Search study groups</label>
+				<input id="group-query" type="search" name="query" value="{{.Query}}"
+					placeholder="Search groups" autocomplete="off">
+				<button type="submit">Search</button>
+			</div>
+
+			{{if or .User .Topics}}
+			<div class="filters">
+				{{if .User}}
+				<fieldset class="filter-group">
+					<legend>Show only</legend>
+					<div class="chip-list">
+						<label class="chip-toggle"><input class="visually-hidden" type="checkbox" name="match" value="1" {{if .Match}}checked{{end}}><span>Shares my interests</span></label>
+						<label class="chip-toggle"><input class="visually-hidden" type="checkbox" name="mine" value="1" {{if .Mine}}checked{{end}}><span>My groups</span></label>
+					</div>
+				</fieldset>
+				{{end}}
+
+				{{with .Topics}}
+				<fieldset class="filter-group">
+					<legend>Topics</legend>
+					<div class="chip-list">
+						{{range .}}
+						<label class="chip-toggle"><input class="visually-hidden" type="checkbox" name="topic" value="{{.ID}}" {{if index $.Picked .ID}}checked{{end}}><span>{{.Name}}</span></label>
+						{{end}}
+					</div>
+				</fieldset>
+				{{end}}
+			</div>
+			{{end}}
+		</form>
+
+		{{if .User}}
+		<p class="hint home-hint">Can't find one? <a href="/groups/new">Start a group</a>.</p>
+		{{else}}
+		<p class="hint home-hint"><a href="/signup">Sign up</a> to join groups and see the ones for signed-in students.</p>
+		{{end}}
+	</section>
+
+	<section class="home-results" aria-labelledby="results-count">
+		<!-- the count lives in the swapped html, so a copy outside it tells screen readers what changed -->
+		<p id="results-status" class="visually-hidden" role="status"></p>
+		<div id="search-results"
+			hx-on::after-swap="document.getElementById('results-status').textContent = document.getElementById('results-count').textContent">
+			{{template "rows" .}}
+		</div>
+	</section>
+
+	<!-- after the list so tab reaches the results first, the grid still puts it on the right.
+		map.js shows it once the map can draw, the list works without it -->
+	<div class="home-map map-section" hidden>
+		<div id="groups-map" class="map" role="region" aria-label="Map of the study groups in the list"></div>
+	</div>
 </div>
+{{end}}
+
+{{define "rows"}}
+{{with .Groups}}
+<h2 id="results-count" class="results-count">{{len .}} {{if eq (len .) 1}}study group{{else}}study groups{{end}}</h2>
+<ol class="cards">
+	{{range .}}{{template "card" .}}{{end}}
+</ol>
+{{else}}
+<h2 id="results-count" class="results-count">0 study groups</h2>
+<div class="empty">
+	<p class="empty-title">No study groups match your search.</p>
+	<p class="hint">Try fewer words, or clear the topic filters.</p>
+</div>
+{{end}}
 {{end}}

@@ -1,0 +1,43 @@
+{{define "content"}}
+<div class="wrap wrap-auth">
+	<section class="panel auth-card" aria-labelledby="signup-heading">
+		<h1 id="signup-heading">Create your account</h1>
+		<p class="lead">A free account lets you join and start study groups.</p>
+		{{template "flash" .}}
+
+		<form class="form" method="post" action="/signup">
+			<input type="hidden" name="next" value="{{.Next}}">
+
+			<div class="field">
+				<label for="username">Username</label>
+				<input id="username" name="username" value="{{.Username}}" required minlength="3" maxlength="30"
+					autocomplete="username" aria-describedby="username-hint">
+				<p class="hint" id="username-hint">3 to 30 letters, numbers, dots, dashes or underscores.</p>
+			</div>
+
+			<div class="field">
+				<label for="email">Email</label>
+				<input id="email" type="email" name="email" value="{{.Email}}" required maxlength="254"
+					autocomplete="email" aria-describedby="email-hint">
+				<p class="hint" id="email-hint">Use your school (.edu) email to see and start groups for your school.</p>
+			</div>
+
+			<div class="field">
+				<label for="password">Password</label>
+				<input id="password" type="password" name="password" required minlength="8" autocomplete="new-password"
+					aria-describedby="password-hint">
+				<p class="hint" id="password-hint">At least 8 characters.</p>
+			</div>
+
+			<div class="field">
+				<label for="confirm">Confirm password</label>
+				<input id="confirm" type="password" name="confirm" required minlength="8" autocomplete="new-password">
+			</div>
+
+			<button class="button-block" type="submit">Create account</button>
+		</form>
+
+		<p class="auth-switch">Already have an account? <a href="/signin{{with .Next}}?next={{.}}{{end}}">Sign in</a></p>
+	</section>
+</div>
+{{end}}

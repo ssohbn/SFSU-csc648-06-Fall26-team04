@@ -1,0 +1,28 @@
+# kamal 2, see "deploy" in README.md. the server ip comes from KAMAL_HOST so it stays out of git
+service: studysync
+image: studysync
+
+servers:
+  web:
+    hosts:
+      - <%= ENV.fetch("KAMAL_HOST") %>
+    # adds the demo accounts and groups on the first boot only, see -seed in app/main.go
+    cmd: -seed
+
+ssh:
+  user: <%= ENV.fetch("KAMAL_SSH_USER", "student") %>
+
+# kamal runs this registry on your machine and the server pulls from it over ssh
+registry:
+  server: localhost:5555
+
+builder:
+  arch: amd64
+
+proxy:
+  ssl: true
+  host: studysync.me,www.studysync.me
+  app_port: 6767
+
+volumes:
+  - studysync_data:/data

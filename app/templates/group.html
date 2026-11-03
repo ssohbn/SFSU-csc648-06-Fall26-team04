@@ -1,0 +1,139 @@
+{{define "content"}}
+<div class="wrap">
+	<a class="back-link" href="/">All groups</a>
+	{{template "flash" .}}
+
+	<header class="group-head">
+		<span class="badge" data-mode="{{.Group.Mode}}">{{.Mode.Label}}</span>
+		<h1>{{.Group.Name}}</h1>
+		<p class="lead">{{.Group.ShortDescription}}</p>
+	</header>
+
+	<div class="group-layout">
+		<aside class="group-side" aria-label="Group details">
+			<section class="panel side-card">
+				<dl class="facts">
+					<div>
+						<dt>Who can join</dt>
+						<dd>{{.Mode.Label}}{{with .Group.SchoolDomain}} ({{.}}){{end}}<span class="hint">{{.Mode.Help}}</span></dd>
+					</div>
+					{{with .Group.MeetingPlace}}
+					<div>
+						<dt>Where</dt>
+						<dd>{{.}}</dd>
+					</div>
+					{{end}}
+					{{with .Group.MeetingTime}}
+					<div>
+						<dt>When</dt>
+						<dd>{{.}}</dd>
+					</div>
+					{{end}}
+					<div>
+						<dt>Members</dt>
+						<dd>{{.Group.Members}} {{if eq .Group.Members 1}}member{{else}}members{{end}}</dd>
+					</div>
+				</dl>
+
+				<div class="actions">
+					{{if not .User}}
+					<a class="button button-block" href="/signup?next={{.Next}}">Sign up to join</a>
+					<p class="hint center">or <a href="/signin?next={{.Next}}">sign in</a> if you have an account</p>
+					{{else if eq .Group.Role "ADMIN"}}
+					<a class="button button-block" href="/groups/{{.Group.ID}}/edit">Edit group</a>
+					<p class="hint center">You run this group.</p>
+					{{else if .Group.Role}}
+					<p class="member-status">You're a member.</p>
+					<form method="post" action="/groups/{{.Group.ID}}/leave">
+						<button class="secondary button-block" type="submit">Leave group</button>
+					</form>
+					{{else if .CanJoin}}
+					<form method="post" action="/groups/{{.Group.ID}}/join">
+						<input type="hidden" name="invite" value="{{.Invite}}">
+						<button class="button-block" type="submit">Join group</button>
+					</form>
+					{{else}}
+					<p class="hint">Add one of this group's topics to your interests to join. Pick one under Topics.</p>
+					{{end}}
+				</div>
+			</section>
+		</aside>
+
+		<div class="group-main">
+			<section class="panel" aria-labelledby="about-heading">
+				<h2 id="about-heading">About this group</h2>
+				{{with .Group.LongDescription}}
+				<p class="prose">{{.}}</p>
+				{{else}}
+				<p class="hint">The organizer hasn't added more details yet.</p>
+				{{end}}
+
+				{{with .Group.Interests}}
+				<h3 class="topics-heading">Topics</h3>
+				{{if $.NeedTopic}}
+				<ul class="tiles tiles-sm">
+					{{range .}}
+					<li>
+						<form method="post" action="/interests/{{.ID}}/add">
+							<input type="hidden" name="next" value="/groups/{{$.Group.ID}}">
+							<button class="tile tile-new" type="submit" aria-label="Add {{.Name}} to your interests">{{.Name}}</button>
+						</form>
+					</li>
+					{{end}}
+				</ul>
+				{{else}}
+				<ul class="chips">
+					{{range .}}<li>{{.Name}}</li>{{end}}
+				</ul>
+				{{end}}
+				{{end}}
+			</section>
+
+			{{with .Group.Pin}}
+			<section class="panel" aria-labelledby="where-heading">
+				<h2 id="where-heading">Where we meet</h2>
+				<div class="map-section" hidden>
+					<div id="group-map" class="map map-group" data-lat="{{.Lat}}" data-lng="{{.Lng}}" role="region"
+						aria-label="Map of where the group meets"></div>
+				</div>
+				<p class="hint"><a href="https://www.openstreetmap.org/?mlat={{.Lat}}&amp;mlon={{.Lng}}#map=17/{{.Lat}}/{{.Lng}}">Open
+						in OpenStreetMap</a> for directions.</p>
+			</section>
+			{{end}}
+
+			{{with .Members}}
+			<section class="panel" aria-labelledby="members-heading">
+				<h2 id="members-heading">Members</h2>
+				<ul class="members">
+					{{range .}}
+					<li>
+						<span class="avatar" aria-hidden="true">{{slice .Username 0 1}}</span>
+						<span class="member-name">{{.Username}}</span>
+						{{if eq .Role "ADMIN"}}<span class="badge badge-ink">Organizer</span>{{end}}
+						{{if and (eq $.Group.Role "ADMIN") (ne .Role "ADMIN")}}
+						<form method="post" action="/groups/{{$.Group.ID}}/members/{{.ID}}/remove">
+							<button class="small secondary" type="submit" aria-label="Remove {{.Username}}">Remove</button>
+						</form>
+						{{end}}
+					</li>
+					{{end}}
+				</ul>
+			</section>
+			{{end}}
+
+			{{with .InviteLink}}
+			<section class="panel" aria-labelledby="invite-heading">
+				<h2 id="invite-heading">Invite link</h2>
+				<p>Anyone with this link can see and join the group.</p>
+				<label class="visually-hidden" for="invite-link">Invite link</label>
+				<input id="invite-link" class="invite-link" value="{{.}}" readonly>
+				<form class="inline-actions" method="post" action="/groups/{{$.Group.ID}}/invite">
+					<button class="small secondary" type="submit">Make a new link</button>
+					<span class="hint">The old link stops working.</span>
+				</form>
+			</section>
+			{{end}}
+		</div>
+	</div>
+</div>
+{{end}}

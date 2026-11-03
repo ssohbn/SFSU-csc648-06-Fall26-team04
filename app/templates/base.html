@@ -1,49 +1,123 @@
 {{define "base"}}
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{with .Title}}{{.}} - {{end}}StudySync</title>
+	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='translate(16 13) rotate(-45) scale(1.2) translate(-10 -10)'%3E%3Cpath fill='%23a8502c' d='M0 20V10a10 10 0 0 1 20 0a10 10 0 0 1-10 10z'/%3E%3Ccircle cx='10' cy='10' r='4' fill='%23fcfaf5'/%3E%3C/g%3E%3C/svg%3E">
+
 	<!-- our site uses htmx to avoid writing js (its annoying and more fun to just do everything in go)-->
 	<script defer src="/static/js/htmx.min.js"></script>
 
 	<!-- our styling! -->
+	<link rel="preload" href="/static/vendor/space-grotesk-v22/space-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 	<link rel="stylesheet" href="/static/style.css">
 
-	<!-- prevents partials on cache miss -->
-	<meta name="htmx-config" content='{
-                "historyRestoreAsHxRequest": false
-            }'>
+	{{if .Map}}
+	<link rel="stylesheet" href="/static/vendor/maplibre-gl-5.23.0/maplibre-gl.css">
+	<script defer src="/static/vendor/maplibre-gl-5.23.0/maplibre-gl.js"></script>
+	<script defer src="/static/js/map.js"></script>
+	{{end}}
 
+	<!-- prevents partials on cache miss. no history cache: back reloads the page,
+		since a saved copy of the page can't bring a live map back -->
+	<meta name="htmx-config" content='{
+                "historyRestoreAsHxRequest": false,
+                "historyCacheSize": 0,
+                "refreshOnHistoryMiss": true
+            }'>
 </head>
-{{template "header" .}}
 
 <body>
-	{{template "content" .}}
-</body>
+	<a class="skip-link" href="#main">Skip to content</a>
+	{{template "header" .}}
 
-{{template "footer" .}}
+	<main id="main" class="page">
+		{{template "content" .}}
+	</main>
+
+	{{template "footer" .}}
+</body>
 
 </html>
 {{end}}
 
 {{define "header"}}
-<header>
-	<nav>
-		<ul>
-			<li><a href="/">home</a></li>
-			<li><a href="/static/">static dir</a></li>
-			<li><a href="/studygroups/">studygroups</a></li>
-		</ul>
-	</nav>
-
+<header class="site-header">
+	<div class="wrap header-bar">
+		<a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>StudySync</a>
+		<nav class="nav-main" aria-label="main">
+			<ul>
+				<li><a href="/" {{if eq .Path "/"}}aria-current="page"{{end}}>Find groups</a></li>
+				<li><a href="/interests/" {{if eq .Path "/interests/"}}aria-current="page"{{end}}>Interests</a></li>
+				{{if .User}}
+				<li><a href="/me/groups" {{if eq .Path "/me/groups"}}aria-current="page"{{end}}>My groups</a></li>
+				{{end}}
+			</ul>
+		</nav>
+		<nav class="nav-account" aria-label="account">
+			{{with .User}}
+			<a class="account-link" href="/me" {{if eq $.Path "/me"}}aria-current="page"{{end}}>
+				<span class="avatar" aria-hidden="true">{{slice .Username 0 1}}</span>
+				<span class="account-name">{{.Username}}</span>
+			</a>
+			<form class="inline" method="post" action="/signout">
+				<button class="link-button" type="submit">Sign out</button>
+			</form>
+			{{else}}
+			<a class="nav-signin" href="/signin" {{if eq .Path "/signin"}}aria-current="page"{{end}}>Sign in</a>
+			<a class="button small" href="/signup">Sign up</a>
+			{{end}}
+		</nav>
+	</div>
 </header>
 {{end}}
 
 {{define "footer"}}
-<footer>
-	<ul>
-		<li><a href="/about/">about</a></li>
-		<li><a target="_blank" href="https://github.com/ssohbn/SFSU-csc648-06-Fall26-team04">source</a></li>
-	</ul>
+<footer class="site-footer">
+	<div class="wrap footer-bar">
+		<p>CSC 648 team 04, Fall 2026</p>
+		<ul>
+			<li><a href="/about/" {{if eq .Path "/about/"}}aria-current="page"{{end}}>About us</a></li>
+			<li><a href="https://github.com/ssohbn/SFSU-csc648-06-Fall26-team04">Source</a></li>
+		</ul>
+	</div>
 </footer>
+{{end}}
+
+{{define "flash"}}
+{{with .Notice}}<p class="notice" role="status">{{.}}</p>{{end}}
+{{with .Error}}<p class="error" role="alert">{{.}}</p>{{end}}
+{{end}}
+
+<!-- one study group in a list. map.js pins the cards that have data-lat -->
+{{define "card"}}
+<li class="card" {{with .Pin}}data-lat="{{.Lat}}" data-lng="{{.Lng}}"{{end}}>
+	<div class="card-top">
+		<h3 class="card-title"><a href="/groups/{{.ID}}">{{.Name}}</a></h3>
+		{{if or (ne .Mode "OPEN") .Role}}
+		<span class="badges">
+			{{if ne .Mode "OPEN"}}<span class="badge" data-mode="{{.Mode}}">{{.ModeLabel}}</span>{{end}}
+			{{with .Role}}{{if eq . "ADMIN"}}<span class="badge badge-ink">Yours</span>{{else}}<span class="badge badge-joined">Joined</span>{{end}}{{end}}
+		</span>
+		{{end}}
+	</div>
+	<p class="card-desc">{{.ShortDescription}}</p>
+	{{if or .MeetingPlace .MeetingTime}}
+	<p class="meets">
+		{{with .MeetingPlace}}<span class="place">{{.}}</span>{{end}}
+		{{with .MeetingTime}}<span class="time">{{.}}</span>{{end}}
+	</p>
+	{{end}}
+	<div class="card-foot">
+		{{with .Interests}}
+		<ul class="tags" aria-label="Topics">
+			{{range .}}<li>{{.Name}}</li>{{end}}
+		</ul>
+		{{end}}
+		<span class="member-count">{{.Members}} {{if eq .Members 1}}member{{else}}members{{end}}</span>
+	</div>
+</li>
 {{end}}
