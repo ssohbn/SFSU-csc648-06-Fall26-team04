@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("load templates: %v", err)
 	}
+	app.matcher = newGeminiMatcher(os.Getenv("GEMINI_API_KEY"), os.Getenv("GEMINI_MODEL"))
 	if *seedDemo {
 		if err := seed(context.Background(), app.store); err != nil {
 			log.Fatalf("seed: %v", err)
