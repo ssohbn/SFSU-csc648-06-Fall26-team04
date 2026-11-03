@@ -23,8 +23,9 @@ import (
 var files embed.FS
 
 type app struct {
-	store *store
-	pages map[string]*template.Template
+	store   *store
+	pages   map[string]*template.Template
+	matcher *geminiMatcher
 }
 
 func newApp(db *sql.DB) (*app, error) {
@@ -77,6 +78,8 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /me", a.profile)
 	mux.HandleFunc("POST /me", a.profile)
 	mux.HandleFunc("GET /me/groups", a.myGroups)
+	mux.HandleFunc("GET /matches", a.matches)
+	mux.HandleFunc("POST /matches", a.matches)
 	mux.HandleFunc("GET /groups/new", a.newGroup)
 	mux.HandleFunc("POST /groups/new", a.newGroup)
 	mux.HandleFunc("GET /groups/{id}", a.group)

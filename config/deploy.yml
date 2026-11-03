@@ -19,6 +19,14 @@ registry:
 builder:
   arch: amd64
 
+env:
+  clear:
+    GEMINI_MODEL: <%= ENV.fetch("GEMINI_MODEL", "gemini-3.5-flash-lite").inspect %>
+<% unless ENV["GEMINI_API_KEY"].to_s.strip.empty? %>
+  secret:
+    - GEMINI_API_KEY
+<% end %>
+
 proxy:
   ssl: true
   host: studysync.me,www.studysync.me
