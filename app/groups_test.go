@@ -10,6 +10,50 @@ import (
 	"testing"
 )
 
+func TestMatchingDraftReviewThenCreate(t *testing.T) {
+	srv, s := newTestServer(t)
+	c := newClient(t, srv)
+	c.signup("draft_student", "draft@example.com")
+	exec(t, s, `UPDATE Users SET Bio = 'private profile detail'`)
+	form := url.Values{"prefill": {"matching"}, "courses": {"CSC 667, CSC 415"}, "availability": {"Thursday 1pm-3pm"}, "preferences": {"Small groups, pair programming"}}
+	code, body, loc := c.post("/groups/new", form)
+	for _, want := range []string{`value="CSC 667 study group"`, `value="Thursday 1pm-3pm"`, `value="CSC 667, CSC 415"`, "Small groups, pair programming", "Nothing has been created yet"} {
+		if code != 200 || loc != "" || !strings.Contains(body, want) {
+			t.Fatalf("prefilled review missing %q: HTTP %d", want, code)
+		}
+	}
+	if strings.Contains(body, "private profile detail") || strings.Contains(body, `name="prefill"`) {
+		t.Fatal("draft leaked the bio or left the final submit in prefill mode")
+	}
+	var count int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM StudyGroups`).Scan(&count); err != nil || count != 0 {
+		t.Fatal("reviewing a draft created a group")
+	}
+	path := c.createGroup(url.Values{"name": {"CSC 667 study group"}, "short": {"Practice web applications together"}, "long": {"Courses: CSC 667, CSC 415\nStudy preferences: Small groups, pair programming"}, "topics": {"CSC 667, CSC 415"}, "time": {"Thursday 1pm-3pm"}})
+	if code, body, _ = c.get(path); code != 200 || !strings.Contains(body, "Thursday 1pm-3pm") || !strings.Contains(body, "CSC 415") || !strings.Contains(body, "Small groups, pair programming") {
+		t.Fatal("final creation did not persist the reviewed details")
+	}
+}
+
+func TestMatchingDraftBoundaries(t *testing.T) {
+	srv, s := newTestServer(t)
+	c := newClient(t, srv)
+	c.signup("draft_bounds", "bounds@example.com")
+	availability := strings.Repeat("Thursday afternoon; ", 5)
+	code, body, _ := c.post("/groups/new", url.Values{"prefill": {"matching"}, "courses": {"CSC 667"}, "availability": {availability}, "preferences": {`<script>alert("x")</script>`}})
+	if code != 200 || !strings.Contains(body, `id="time" name="time" value=""`) || !strings.Contains(body, strings.TrimSpace(availability)) || strings.Contains(body, `<script>alert(`) || !strings.Contains(body, "&lt;script&gt;") {
+		t.Fatal("long availability must remain in description, with no truncated meeting time or HTML injection")
+	}
+	code, _, _ = c.post("/groups/new", url.Values{"prefill": {"matching"}, "courses": {strings.Repeat("x", 201)}})
+	if code != 422 {
+		t.Fatalf("oversized draft must be rejected, got %d", code)
+	}
+	var count int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM StudyGroups`).Scan(&count); err != nil || count != 0 {
+		t.Fatal("draft boundary checks wrote groups")
+	}
+}
+
 // createGroup posts the new group form, filling in what form leaves out, and
 // returns the group's page.
 func (c *client) createGroup(form url.Values) string {

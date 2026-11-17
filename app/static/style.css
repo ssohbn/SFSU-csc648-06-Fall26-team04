@@ -343,7 +343,8 @@ a:hover {
 
 .nav-main ul {
     display: flex;
-    gap: 28px;
+    flex-wrap: wrap;
+    gap: 0 28px;
     height: 100%;
     margin: 0;
     padding: 0;
@@ -358,6 +359,7 @@ a:hover {
     position: relative;
     display: flex;
     align-items: center;
+    min-height: 44px;
     /* room for the focus ring, which sits inside since the link fills the bar */
     margin-inline: -6px;
     padding-inline: 6px;
@@ -1037,6 +1039,11 @@ span.tile:hover {
     position: absolute;
     inset: 0;
     border-radius: 12px;
+}
+
+.card .button {
+    position: relative;
+    z-index: 1;
 }
 
 .card:hover .card-title a {
@@ -1747,12 +1754,12 @@ fieldset.field > .tiles {
     }
 
     .nav-main {
-        height: 44px;
+        height: auto;
         margin-top: 4px;
     }
 
     .nav-main ul {
-        gap: 24px;
+        gap: 0 24px;
     }
 
     .nav-account {
@@ -1859,3 +1866,4 @@ fieldset.field > .tiles {
         animation: none !important;
     }
 }
+.matching-draft { margin-top: 1.5rem; }

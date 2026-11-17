@@ -360,6 +360,22 @@ func (a *app) newGroup(w http.ResponseWriter, r *http.Request) {
 		a.renderGroupForm(w, r, http.StatusOK, StudyGroup{Mode: modeOpen}, nil, "", "")
 		return
 	}
+	if r.PostFormValue("prefill") == "matching" {
+		w.Header().Set("Cache-Control", "no-store")
+		details, valid := matchingDetails(r)
+		if !valid {
+			a.errorPage(w, r, http.StatusUnprocessableEntity, "Details are too long", "Keep courses to 200 characters and availability and preferences to 300 each.")
+			return
+		}
+		interests, err := a.store.userInterests(r.Context(), user.ID)
+		if err != nil {
+			a.serverError(w, r, err)
+			return
+		}
+		g := matchingDraft(details, interests)
+		a.renderGroupForm(w, r, http.StatusOK, g, nil, strings.Join(topicNames(g), ", "), "")
+		return
+	}
 	g, topics, problem := readGroupForm(r, user, StudyGroup{})
 	if problem != "" {
 		a.renderGroupForm(w, r, http.StatusUnprocessableEntity, g, r.PostForm["topic"], r.PostFormValue("topics"), problem)
@@ -411,11 +427,12 @@ func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int
 	}
 	type groupFormView struct {
 		view
-		Group  StudyGroup
-		Topics []topic
-		Other  string
-		Modes  []modeChoice
-		School string // the school a school group is for, "" if there's none to use
+		Group     StudyGroup
+		Topics    []topic
+		Other     string
+		Modes     []modeChoice
+		School    string // the school a school group is for, "" if there's none to use
+		Prefilled bool
 	}
 	title := "Start a group"
 	if g.ID != 0 {
@@ -427,6 +444,7 @@ func (a *app) renderGroupForm(w http.ResponseWriter, r *http.Request, status int
 		v.Topics = append(v.Topics, topic{i.Name, slices.Contains(picked, i.Name)})
 	}
 	v.Error = problem
+	v.Prefilled = g.ID == 0 && r.PostFormValue("prefill") == "matching"
 	v.Map = true
 	a.render(w, status, "groupform.html", "base", v)
 }
